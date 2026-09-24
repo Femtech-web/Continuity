@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title description">
+  <title id="title">Continuity token</title>
+  <desc id="description">Continuity's mint green open circle and forward arrow mark on a deep green field.</desc>
+  <defs>
+    <radialGradient id="field" cx="50%" cy="38%" r="76%">
+      <stop offset="0" stop-color="#12352a"/>
+      <stop offset="0.58" stop-color="#0a211a"/>
+      <stop offset="1" stop-color="#06130f"/>
+    </radialGradient>
+    <linearGradient id="mark" x1="230" y1="790" x2="800" y2="210" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2ad38c"/>
+      <stop offset="1" stop-color="#a4ffd4"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="18" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" rx="224" fill="url(#field)"/>
+  <circle cx="512" cy="512" r="394" fill="none" stroke="#8cf7c1" stroke-opacity="0.08" stroke-width="2"/>
+  <circle cx="512" cy="512" r="300" fill="#071812" stroke="#8cf7c1" stroke-opacity="0.12" stroke-width="2"/>
+  <g transform="translate(128 128) scale(24)" fill="none" stroke="url(#mark)" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" filter="url(#glow)">
+    <path d="M22.75 8.65a9.5 9.5 0 1 0 .3 14.38"/>
+    <path d="M18.5 13.25 23.2 8.6l4.55 4.65"/>
+  </g>
+</svg>
