@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowIcon, ContinuityMark } from "@/components/continuity-mark";
 import { timeline } from "@/domain/continuity/demo-fixtures";
+import { FaqSection } from "@/features/home/faq-section";
 
 export function ProofSection() {
   return (
@@ -52,6 +53,8 @@ export function ProofSection() {
           </Link>
         </div>
       </section>
+
+      <FaqSection />
 
       <footer className="site-footer page-shell">
         <ContinuityMark />

@@ -21,9 +21,11 @@ or freeze the old pool.
 Each protected market also has an **Agent treasury**. Continuity verifies that
 the bound ClawPump agent is the market's real onchain fee authority and shows
 the partner fees Meteora has recorded for it, separately from trader liquidity
-and the human operator's wallet. Reading those fees is live. Claiming, swapping,
-and depositing them into a lending vault remain deliberately locked until the
-exact agent wallet has a supported, reviewable signing route.
+and the human operator's wallet. The complete goal is to **track agent fees and
+put them to work through guarded yield**. Reading and verifying those fees is
+live today. Claiming, swapping, and depositing them into a lending vault remain
+deliberately locked until the exact agent wallet has a supported, reviewable
+signing route.
 
 This is already producing real mainnet protocol revenue. The confirmed
 `CONT/SPCXx` pool currently reports `308,601` raw fee units, equal to
@@ -43,7 +45,7 @@ In one line:
 owned ClawPump agent + new agent token + verified stock quote
   → wallet-approved Meteora market
   → continuous Sentinel protection
-  → verified agent-fee treasury
+  → agent treasury: track fees → guarded yield
 ```
 
 **Start here:** [`docs/product-flow.md`](docs/product-flow.md) explains the
@@ -86,7 +88,7 @@ tools:
 | **Launch** | Pair an owned ClawPump agent and its new token with an eligible stock quote, review the bounded Meteora design, run a live Solana simulation, and explicitly approve the transaction in the operator wallet. |
 | **Protected markets** | Open the live trade route, pool account, launch transaction, curve progress, and latest Sentinel result for each confirmed market. |
 | **Activity** | Review automatic and on-demand lifecycle checks, deterministic verdicts, evidence hashes, receipts, and alerts. |
-| **Treasury** | See the real Meteora partner fees assigned to each market's agent and verify that the agent—not Continuity or the operator—is the fee authority. |
+| **Treasury** | Track the real Meteora fees earned by each market's agent and, once the guarded claim-and-vault path is enabled, put those earnings to work without giving Continuity custody. |
 | **Skill, x402, and MCP/API** | Let ClawPump agents and external applications request the same source-backed decision without receiving wallet custody or permission to launch. |
 
 This makes Continuity different from a generic token launcher and from a stock
@@ -149,12 +151,14 @@ removes Continuity's Trade action. It does not seize user funds or modify the
 old pool. Instead, it preserves the reason and prepares a separately reviewed
 successor market for operator approval.
 
-### 5. Track the agent's market revenue
+### 5. Track agent fees and prepare them to earn
 
 Meteora can record part of the trading fees for the ClawPump agent configured
 as the market partner. **Treasury** reads those fees directly from the pool,
 checks that the registered agent is the real fee authority, and shows the SOL
-the agent keeps for operating costs.
+the agent keeps for operating costs. The intended next step is to claim a
+policy-capped amount and supply it to one reviewed yield vault so idle agent
+revenue can earn without exposing trader liquidity.
 
 The treasury is currently read-only. Displayed claimable fees are real onchain
 accounting, but they have not entered the agent wallet and are not yield.
@@ -311,8 +315,10 @@ Continuity's stronger workflow is **Create protected agent market**:
 2. define the token representing that agent or its service;
 3. choose a lifecycle-verified stock quote asset;
 4. apply a stock-aware Meteora DBC policy;
-5. simulate and approve the launch; and
-6. keep Sentinel attached to the resulting market.
+5. simulate and approve the launch;
+6. keep Sentinel attached to the resulting market; and
+7. track the agent's market fees, then route claimed earnings into
+   policy-approved yield vaults once agent-authorized signing is available.
 
 This makes ClawPump's agent identity, wallet, skills, automations, and revenue
 surface part of the product while Meteora supplies the distinctive launch and
@@ -778,11 +784,12 @@ route cannot complete correctly.
 
 ## Agent treasury
 
-Continuity now includes a read-only treasury for every protected market. It
-reads the live Meteora partner-fee balance, verifies that the onchain fee
-authority is the market's bound ClawPump agent, and shows that agent wallet's
-SOL operating reserve. The figures refresh automatically and no signature is
-requested.
+Continuity's Agent treasury is designed to let an agent **track its market fees
+and put eligible earnings to work through guarded yield**. Its live surface is
+currently read-only: it reads the Meteora partner-fee balance, verifies that
+the onchain fee authority is the market's bound ClawPump agent, and shows that
+agent wallet's SOL operating reserve. The figures refresh automatically and no
+signature is requested.
 
 This is deliberately not a vault for public deposits. It never counts or moves
 trader liquidity, user tokens, or the human operator's wallet balance. If the
