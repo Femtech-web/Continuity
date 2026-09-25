@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DashboardShell } from "@/features/dashboard/dashboard-shell";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Market replay",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function DemoMarketPage() {
-  return <DashboardShell experience="demo" view="market" />;
+  redirect("/demo/launch");
 }

@@ -1,0 +1,218 @@
+.tourTrigger {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgba(39, 122, 87, 0.22);
+  border-radius: 8px;
+  background: rgba(42, 168, 115, 0.09);
+  color: #286d55;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 660;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.tourTrigger:hover {
+  border-color: rgba(39, 122, 87, 0.24);
+  background: rgba(42, 168, 115, 0.07);
+  color: #286d55;
+}
+
+.tourLayer {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  pointer-events: none;
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(1, 10, 8, 0.72);
+  backdrop-filter: blur(1.5px);
+  pointer-events: auto;
+  animation: tour-fade 220ms var(--ease-out, ease-out) both;
+}
+
+.backdropWithSpotlight {
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.spotlight {
+  position: fixed;
+  z-index: 1;
+  border: 1px solid rgba(140, 247, 193, 0.72);
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 9999px rgba(1, 10, 8, 0.68),
+    0 0 0 2px rgba(140, 247, 193, 0.12),
+    0 0 34px rgba(81, 224, 158, 0.13);
+  pointer-events: none;
+  transition:
+    left 280ms cubic-bezier(0.16, 1, 0.3, 1),
+    top 280ms cubic-bezier(0.16, 1, 0.3, 1),
+    width 280ms cubic-bezier(0.16, 1, 0.3, 1),
+    height 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.popover {
+  position: fixed;
+  z-index: 2;
+  width: min(356px, calc(100vw - 32px));
+  padding: 20px;
+  border: 1px solid rgba(140, 247, 193, 0.28);
+  border-radius: 12px;
+  background: #0b1714;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.36);
+  color: var(--paper-bright);
+  pointer-events: auto;
+  animation: tour-pop 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.popoverBelow::before,
+.popoverRight::before {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-top: 1px solid rgba(140, 247, 193, 0.28);
+  border-left: 1px solid rgba(140, 247, 193, 0.28);
+  background: #0b1714;
+  content: "";
+}
+
+.popoverBelow::before {
+  top: -6px;
+  left: 24px;
+  transform: rotate(45deg);
+}
+
+.popoverRight::before {
+  top: 24px;
+  left: -6px;
+  transform: rotate(-45deg);
+}
+
+.popoverHeader,
+.popoverHeader > div,
+.tourActions {
+  display: flex;
+  align-items: center;
+}
+
+.popoverHeader {
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.popoverHeader > div { gap: 9px; }
+
+.popoverHeader span {
+  color: var(--mint);
+  font-size: 11px;
+  font-weight: 720;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.popoverHeader small {
+  color: rgba(250, 248, 242, 0.35);
+  font-size: 11px;
+}
+
+.popoverHeader button {
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: rgba(250, 248, 242, 0.48);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+}
+
+.popover h2 {
+  margin: 17px 0 0;
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 560;
+  letter-spacing: -0.035em;
+  line-height: 1.13;
+}
+
+.popover p {
+  margin: 10px 0 0;
+  color: rgba(250, 248, 242, 0.58);
+  font-size: 13px;
+  line-height: 1.62;
+}
+
+.progress {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+  margin: 20px 0;
+}
+
+.progress span {
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(250, 248, 242, 0.1);
+}
+
+.progress .progressActive { background: var(--mint); }
+
+.tourActions {
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.tourActions button {
+  min-width: 72px;
+  min-height: 36px;
+  border: 1px solid rgba(250, 248, 242, 0.13);
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(250, 248, 242, 0.72);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 680;
+}
+
+.tourActions button:disabled { cursor: default; opacity: 0.3; }
+
+.tourActions .nextAction {
+  border-color: var(--mint);
+  background: var(--mint);
+  color: #07130f;
+}
+
+@keyframes tour-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes tour-pop {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 760px) {
+  .popover,
+  .popoverRight,
+  .popoverBelow {
+    right: 16px !important;
+    bottom: 16px !important;
+    left: 16px !important;
+    top: auto !important;
+    width: auto;
+  }
+
+  .popover::before { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .popover { animation: none; }
+  .spotlight { transition: none; }
+}

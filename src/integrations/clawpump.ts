@@ -33,6 +33,27 @@ export interface ClawPumpLaunchAuthority {
   };
 }
 
+export interface ClawPumpAgentRecord {
+  readonly id: string;
+  readonly name: string;
+  readonly skills: readonly string[];
+  readonly status: string;
+  readonly walletAddress: string;
+}
+
+export interface ClawPumpSkillRecord {
+  readonly alwaysOn: boolean;
+  readonly description: string;
+  readonly name: string;
+  readonly slug: string;
+}
+
+export interface CreateClawPumpAgentInput {
+  readonly name: string;
+  readonly persona: string;
+  readonly skills: readonly string[];
+}
+
 interface ClawPumpMeta {
   readonly requestId: string | null;
 }
@@ -48,7 +69,7 @@ function parseMeta(value: unknown): ClawPumpMeta {
   };
 }
 
-function parseAgent(value: unknown, expectedAgentId: string) {
+function parseAgent(value: unknown, expectedAgentId?: string): ClawPumpAgentRecord {
   if (!isRecord(value)) {
     throw new IntegrationError(
       "INVALID_RESPONSE",
@@ -65,7 +86,7 @@ function parseAgent(value: unknown, expectedAgentId: string) {
 
   if (
     typeof id !== "string" ||
-    id !== expectedAgentId ||
+    (expectedAgentId !== undefined && id !== expectedAgentId) ||
     typeof name !== "string" ||
     typeof status !== "string" ||
     typeof walletAddress !== "string" ||
@@ -118,6 +139,125 @@ export class ClawPumpAdapter {
     this.#fetch = options.fetchImplementation ?? fetch;
     this.#now = options.now ?? (() => new Date());
     this.#timeoutMs = options.timeoutMs ?? 7_000;
+  }
+
+  async #request(path: string, init: RequestInit = {}): Promise<unknown> {
+    if (!this.#apiKey) {
+      throw new IntegrationError(
+        "AUTH_REQUIRED",
+        "ClawPump is not configured. Add CLAWPUMP_API_KEY.",
+        { retryable: false, status: 503 },
+      );
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.#timeoutMs);
+    try {
+      const response = await this.#fetch(`${this.#baseUrl}${path}`, {
+        ...init,
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${this.#apiKey}`,
+          ...(init.body ? { "Content-Type": "application/json" } : {}),
+          ...init.headers,
+        },
+        signal: controller.signal,
+      });
+      if (response.status === 401 || response.status === 403) {
+        throw new IntegrationError(
+          "AUTH_REQUIRED",
+          "ClawPump rejected the configured partner credential.",
+          { retryable: false, status: 503 },
+        );
+      }
+      if (response.status === 429) {
+        throw new IntegrationError(
+          "RATE_LIMITED",
+          "ClawPump rate limited the request.",
+          { retryable: true, status: 503 },
+        );
+      }
+      if (!response.ok) {
+        throw new IntegrationError(
+          "UPSTREAM_UNAVAILABLE",
+          `ClawPump returned HTTP ${response.status}.`,
+          { retryable: response.status >= 500, status: 503 },
+        );
+      }
+      return response.json();
+    } catch (error) {
+      if (error instanceof IntegrationError) throw error;
+      throw new IntegrationError(
+        "UPSTREAM_UNAVAILABLE",
+        "ClawPump request failed or timed out.",
+        { retryable: true, status: 503 },
+      );
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  async listAgents(): Promise<readonly ClawPumpAgentRecord[]> {
+    const payload = await this.#request("/agents");
+    if (!isRecord(payload) || !Array.isArray(payload.agents)) {
+      throw new IntegrationError(
+        "INVALID_RESPONSE",
+        "ClawPump did not return an agent list.",
+        { retryable: false, status: 502 },
+      );
+    }
+    return Object.freeze(payload.agents.map((agent) => parseAgent(agent)));
+  }
+
+  async createAgent(input: CreateClawPumpAgentInput): Promise<ClawPumpAgentRecord> {
+    const payload = await this.#request("/agents", {
+      body: JSON.stringify({
+        name: input.name,
+        persona: input.persona,
+        skills: input.skills,
+      }),
+      method: "POST",
+    });
+    if (!isRecord(payload)) {
+      throw new IntegrationError(
+        "INVALID_RESPONSE",
+        "ClawPump did not return the created agent.",
+        { retryable: false, status: 502 },
+      );
+    }
+    return parseAgent(payload.agent ?? payload);
+  }
+
+  async listSkills(): Promise<readonly ClawPumpSkillRecord[]> {
+    const payload = await this.#request("/skills");
+    if (!isRecord(payload) || !Array.isArray(payload.skills)) {
+      throw new IntegrationError(
+        "INVALID_RESPONSE",
+        "ClawPump did not return a skill catalogue.",
+        { retryable: false, status: 502 },
+      );
+    }
+    const skills = payload.skills.map((value) => {
+      if (
+        !isRecord(value) ||
+        typeof value.slug !== "string" ||
+        typeof value.name !== "string" ||
+        typeof value.description !== "string"
+      ) {
+        throw new IntegrationError(
+          "INVALID_RESPONSE",
+          "ClawPump returned an invalid skill record.",
+          { retryable: false, status: 502 },
+        );
+      }
+      return Object.freeze({
+        alwaysOn: value.alwaysOn === true,
+        description: value.description,
+        name: value.name,
+        slug: value.slug,
+      });
+    });
+    return Object.freeze(skills);
   }
 
   async resolveLaunchAuthority(): Promise<ClawPumpLaunchAuthority> {

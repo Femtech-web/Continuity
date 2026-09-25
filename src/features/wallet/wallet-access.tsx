@@ -6,6 +6,7 @@ import {
   useConnectedWallet,
   useDisconnect,
   useIsWalletReady,
+  useSignMessage,
   useWallets,
 } from "@solana/kit-plugin-wallet/react";
 import { useClient } from "@solana/react";
@@ -49,7 +50,10 @@ interface ToastState {
 }
 
 interface WalletAccessContextValue {
+  readonly authenticateOperator: () => Promise<boolean>;
   readonly address: string | null;
+  readonly isAuthenticated: boolean;
+  readonly isAuthenticating: boolean;
   readonly isReady: boolean;
   readonly isScanning: boolean;
   readonly openAccount: () => void;
@@ -83,11 +87,14 @@ export function WalletAccessProvider({
   const isReady = hasHydrated && isWalletReady;
   const connect = useConnect(client);
   const disconnect = useDisconnect(client);
+  const signMessage = useSignMessage(client);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [dialogIntent, setDialogIntent] = useState<DialogIntent>("account");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [authenticatedWallet, setAuthenticatedWallet] = useState<string | null>(null);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
 
   const showToast = useCallback((message: string, tone: ToastTone = "neutral") => {
@@ -111,6 +118,36 @@ export function WalletAccessProvider({
     if (!isDialogOpen && dialog.open) dialog.close();
   }, [isDialogOpen]);
 
+  useEffect(() => {
+    const walletAddress = connected?.account.address;
+    if (!walletAddress) return;
+    const controller = new AbortController();
+    async function restoreOperatorSession() {
+      try {
+        const response = await fetch("/api/v1/auth/session", {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        if (!response.ok) return;
+        const payload = (await response.json()) as {
+          readonly authenticated?: boolean;
+          readonly walletAddress?: string;
+        };
+        setAuthenticatedWallet(
+          payload.authenticated === true && payload.walletAddress === walletAddress
+            ? (payload.walletAddress ?? null)
+            : null,
+        );
+      } catch {
+        if (!controller.signal.aborted) setAuthenticatedWallet(null);
+      }
+    }
+    void restoreOperatorSession();
+    return () => controller.abort();
+  }, [connected?.account.address]);
+
+  const isAuthenticated = authenticatedWallet === connected?.account.address;
+
   const closeDialog = useCallback(() => setIsDialogOpen(false), []);
 
   const openAccount = useCallback(() => {
@@ -130,13 +167,71 @@ export function WalletAccessProvider({
 
   const disconnectWallet = async () => {
     try {
+      if (isAuthenticated) {
+        await fetch("/api/v1/auth/session", { method: "DELETE" });
+      }
       await disconnect.dispatchAsync();
+      setAuthenticatedWallet(null);
       closeDialog();
       showToast("Wallet disconnected.");
     } catch (error) {
       showToast(getErrorMessage(error), "error");
     }
   };
+
+  const authenticateOperator = useCallback(async () => {
+    if (!connected || isAuthenticating) {
+      if (!connected) openAccount();
+      return false;
+    }
+    setIsAuthenticating(true);
+    try {
+      const challengeResponse = await fetch("/api/v1/auth/challenge", {
+        body: JSON.stringify({ walletAddress: connected.account.address }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const challenge = (await challengeResponse.json()) as {
+        readonly challengeId?: string;
+        readonly message?: string;
+        readonly error?: { readonly message?: string };
+      };
+      if (!challengeResponse.ok || !challenge.challengeId || !challenge.message) {
+        throw new Error(challenge.error?.message ?? "Continuity could not start wallet verification.");
+      }
+      const signature = await signMessage.dispatchAsync(
+        new TextEncoder().encode(challenge.message),
+      );
+      const signatureBase64 = btoa(
+        Array.from(signature, (byte) => String.fromCharCode(byte)).join(""),
+      );
+      const verifyResponse = await fetch("/api/v1/auth/verify", {
+        body: JSON.stringify({
+          challengeId: challenge.challengeId,
+          signature: signatureBase64,
+          walletAddress: connected.account.address,
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const verification = (await verifyResponse.json()) as {
+        readonly error?: { readonly message?: string };
+        readonly walletAddress?: string;
+      };
+      if (!verifyResponse.ok || verification.walletAddress !== connected.account.address) {
+        throw new Error(verification.error?.message ?? "Wallet verification did not complete.");
+      }
+      setAuthenticatedWallet(connected.account.address);
+      showToast("Operator wallet verified.", "success");
+      return true;
+    } catch (error) {
+      showToast(getErrorMessage(error), "error");
+      setAuthenticatedWallet(null);
+      return false;
+    } finally {
+      setIsAuthenticating(false);
+    }
+  }, [connected, isAuthenticating, openAccount, showToast, signMessage]);
 
   const copyAddress = async () => {
     if (!connected) return;
@@ -208,13 +303,25 @@ export function WalletAccessProvider({
 
   const contextValue = useMemo<WalletAccessContextValue>(
     () => ({
+      authenticateOperator,
       address: connected?.account.address ?? null,
+      isAuthenticated,
+      isAuthenticating,
       isReady,
       isScanning,
       openAccount,
       scanWallet,
     }),
-    [connected?.account.address, isReady, isScanning, openAccount, scanWallet],
+    [
+      authenticateOperator,
+      connected?.account.address,
+      isAuthenticated,
+      isAuthenticating,
+      isReady,
+      isScanning,
+      openAccount,
+      scanWallet,
+    ],
   );
 
   return (

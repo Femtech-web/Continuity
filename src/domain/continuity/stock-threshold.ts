@@ -43,6 +43,11 @@ export interface StockThresholdCalibration {
   readonly targetUsd: number;
 }
 
+export interface DecimalPrice {
+  readonly exponent: number;
+  readonly priceMantissa: string;
+}
+
 function parsePositiveInteger(value: string, field: string): bigint {
   if (!/^\d+$/.test(value)) throw new TypeError(`${field} must be an unsigned integer`);
   const parsed = BigInt(value);
@@ -85,7 +90,7 @@ export function formatBaseUnits(baseUnits: bigint, decimals: number): string {
 }
 
 export function calibrateStockThreshold(
-  snapshot: StockReferenceSnapshot,
+  snapshot: DecimalPrice,
   options: { readonly quoteDecimals: number; readonly targetUsd: number },
 ): StockThresholdCalibration {
   if (!Number.isInteger(options.targetUsd) || options.targetUsd <= 0) {

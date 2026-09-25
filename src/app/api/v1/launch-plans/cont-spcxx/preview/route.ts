@@ -1,10 +1,12 @@
 import { readServerEnvironment } from "@/config/server-environment";
 import { ClawPumpAdapter } from "@/integrations/clawpump";
+import { CompositeMarketReferenceAdapter } from "@/integrations/composite-market-reference";
 import {
   IntegrationError,
   integrationErrorResponse,
 } from "@/integrations/integration-error";
 import { buildContSpcxxLaunchReview } from "@/integrations/meteora-launch-config";
+import { JupiterQuoteAdapter } from "@/integrations/jupiter-quote";
 import { PythProAdapter } from "@/integrations/pyth-pro";
 import { buildMeteoraLaunchPlan } from "@/transactions/meteora-launch-plan";
 
@@ -51,13 +53,16 @@ export async function POST(request: Request) {
       feedId: environment.pyth.feedId,
       timeoutMs: environment.pyth.timeoutMs,
     });
+    const marketReference = new CompositeMarketReferenceAdapter({
+      jupiter: new JupiterQuoteAdapter(environment.jupiter),
+      pyth,
+    });
     const [clawPumpAuthority, observation] = await Promise.all([
       clawpump.resolveLaunchAuthority(),
-      pyth.getSpcxxUsdReference(),
+      marketReference.getSpcxxUsdReference(),
     ]);
     const review = await buildContSpcxxLaunchReview({
-      evaluatedAt: observation.provenance.retrievedAt,
-      mode: "LIVE_PYTH_PRO",
+      mode: "LIVE_COMPOSITE",
       observation,
     });
     const plan = await buildMeteoraLaunchPlan({

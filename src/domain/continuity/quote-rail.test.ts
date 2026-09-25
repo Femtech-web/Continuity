@@ -93,6 +93,15 @@ test("sends stale market reference data to manual review", () => {
   assert.ok(result.reasons.includes("MARKET_REFERENCE_STALE"));
 });
 
+test("requires human review for a freshly captured draft manifest", () => {
+  const result = evaluateQuoteRail({
+    ...baseInput,
+    manifest: { ...baseInput.manifest, evidenceStatus: "UNREVIEWED" },
+  });
+  assert.equal(result.code, "MANUAL_REVIEW");
+  assert.ok(result.reasons.includes("LIFECYCLE_REVIEW_REQUIRED"));
+});
+
 test("blocks an observed configuration hash mismatch", () => {
   const result = evaluateQuoteRail({
     ...baseInput,

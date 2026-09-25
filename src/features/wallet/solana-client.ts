@@ -2,14 +2,14 @@ import { createClient } from "@solana/kit";
 import { solanaRpc } from "@solana/kit-plugin-rpc";
 import { walletSigner } from "@solana/kit-plugin-wallet";
 
-const cluster =
+export const solanaChain =
   process.env.NEXT_PUBLIC_SOLANA_CLUSTER === "devnet"
     ? ("solana:devnet" as const)
     : ("solana:mainnet" as const);
 
 const rpcUrl =
   process.env.NEXT_PUBLIC_SOLANA_RPC_URL ??
-  (cluster === "solana:devnet"
+  (solanaChain === "solana:devnet"
     ? "https://api.devnet.solana.com"
     : "https://api.mainnet-beta.solana.com");
 
@@ -17,7 +17,7 @@ export const solanaClient = createClient()
   .use(
     walletSigner({
       autoConnect: true,
-      chain: cluster,
+      chain: solanaChain,
       storageKey: "continuity-wallet",
     }),
   )
@@ -26,4 +26,4 @@ export const solanaClient = createClient()
 export type ContinuitySolanaClient = Awaited<typeof solanaClient>;
 
 export const solanaNetworkLabel =
-  cluster === "solana:devnet" ? "Solana devnet" : "Solana mainnet";
+  solanaChain === "solana:devnet" ? "Solana devnet" : "Solana mainnet";

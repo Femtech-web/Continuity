@@ -9,6 +9,12 @@ export interface ServerEnvironment {
   };
   readonly cont: {
     readonly metadataUri: string | null;
+    readonly operatorWallet: string | null;
+  };
+  readonly jupiter: {
+    readonly apiKey: string | null;
+    readonly baseUrl: string;
+    readonly timeoutMs: number;
   };
   readonly meteora: {
     readonly configAddress: string | null;
@@ -30,6 +36,10 @@ export interface ServerEnvironment {
     readonly cluster: SolanaCluster;
     readonly rpcUrl: string;
     readonly timeoutMs: number;
+  };
+  readonly supabase: {
+    readonly secretKey: string | null;
+    readonly url: string | null;
   };
 }
 
@@ -77,10 +87,10 @@ function parseOptionalAddress(
 }
 
 function parseFeedId(value: string | undefined): number {
-  if (value === undefined) return 3329;
+  if (value === undefined) return 6;
   const feedId = Number(value);
   if (!Number.isInteger(feedId) || feedId <= 0) {
-    throw new TypeError("PYTH_SPCXX_USD_FEED_ID must be a positive integer");
+    throw new TypeError("PYTH_SOL_USD_FEED_ID must be a positive integer");
   }
   return feedId;
 }
@@ -121,6 +131,18 @@ export function readServerEnvironment(
         environment.CONT_TOKEN_METADATA_URI,
         "CONT_TOKEN_METADATA_URI",
       ),
+      operatorWallet: parseOptionalAddress(
+        environment.CONT_OPERATOR_WALLET,
+        "CONT_OPERATOR_WALLET",
+      ),
+    }),
+    jupiter: Object.freeze({
+      apiKey: environment.JUPITER_API_KEY?.trim() || null,
+      baseUrl: parseHttpUrl(
+        environment.JUPITER_API_URL ?? "https://lite-api.jup.ag",
+        "JUPITER_API_URL",
+      ),
+      timeoutMs: parseTimeout(environment.JUPITER_TIMEOUT_MS, "JUPITER_TIMEOUT_MS"),
     }),
     meteora: Object.freeze({
       configAddress: parseOptionalAddress(
@@ -158,13 +180,20 @@ export function readServerEnvironment(
         "PYTH_PRO_BASE_URL",
       ),
       channel: "fixed_rate@200ms" as const,
-      feedId: parseFeedId(environment.PYTH_SPCXX_USD_FEED_ID),
+      feedId: parseFeedId(environment.PYTH_SOL_USD_FEED_ID),
       timeoutMs: parseTimeout(environment.PYTH_PRO_TIMEOUT_MS, "PYTH_PRO_TIMEOUT_MS"),
     }),
     solana: Object.freeze({
       cluster,
       rpcUrl: parseHttpUrl(configuredRpc ?? defaultRpcUrls[cluster], "SOLANA_RPC_URL"),
       timeoutMs: parseTimeout(environment.SOLANA_RPC_TIMEOUT_MS),
+    }),
+    supabase: Object.freeze({
+      secretKey:
+        environment.SUPABASE_SECRET_KEY?.trim() ||
+        environment.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
+        null,
+      url: parseOptionalHttpUrl(environment.SUPABASE_URL, "SUPABASE_URL"),
     }),
   });
 }

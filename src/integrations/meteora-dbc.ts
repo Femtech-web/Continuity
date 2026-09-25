@@ -2,9 +2,11 @@ import {
   DYNAMIC_BONDING_CURVE_PROGRAM_ID,
   DynamicBondingCurveClient,
   deriveTokenBadgeAddress,
+  feeNumeratorToBps,
 } from "@meteora-ag/dynamic-bonding-curve-sdk";
 import { Connection, PublicKey } from "@solana/web3.js";
 import type { SolanaCluster } from "../config/server-environment.ts";
+import { canonicalSha256 } from "../domain/continuity/canonical-json.ts";
 import {
   evaluateDbcAttestation,
   type DbcAttestationEvaluation,
@@ -31,15 +33,20 @@ export interface MeteoraDbcObservation {
     readonly config: string | null;
     readonly pool: string | null;
     readonly program: string;
+    readonly quoteDecimals: number;
     readonly quoteMint: string;
   };
   readonly attestation: DbcAttestationEvaluation;
   readonly market: null | {
+    readonly baseReserve: string;
     readonly baseMint: string;
     readonly configAddress: string;
+    readonly feeConfigurationHash: string;
+    readonly openingFeeBps: number;
     readonly curveProgress: number;
     readonly isMigrated: boolean;
     readonly migrationProgress: number;
+    readonly quoteReserve: string;
     readonly quoteMint: string;
   };
   readonly provenance: {
@@ -107,13 +114,17 @@ export class MeteoraDbcAdapter {
   }
 
   async attestSpcxxQuoteRail(): Promise<MeteoraDbcObservation> {
-    const quoteMint = new PublicKey(SPCXX_MINT);
+    return this.attestQuoteRail(SPCXX_MINT);
+  }
+
+  async attestQuoteRail(quoteMintAddress: string): Promise<MeteoraDbcObservation> {
+    const quoteMint = new PublicKey(quoteMintAddress);
     const badgeAddress = deriveTokenBadgeAddress(quoteMint).toBase58();
 
     try {
       const [mint, badge, config, pool] = await withTimeout(
         Promise.all([
-          this.#mintReader.getMint(SPCXX_MINT),
+          this.#mintReader.getMint(quoteMintAddress),
           this.#state.getTokenBadge(quoteMint),
           this.#configAddress === null
             ? Promise.resolve(null)
@@ -146,7 +157,7 @@ export class MeteoraDbcAdapter {
       const input: DbcAttestationInput = {
         expected: {
           badgeAddress,
-          quoteMint: SPCXX_MINT,
+          quoteMint: quoteMintAddress,
           tokenProgram: TOKEN_2022_PROGRAM,
         },
         observed: {
@@ -173,12 +184,28 @@ export class MeteoraDbcAdapter {
           this.#state.getPoolQuoteTokenCurveProgress(this.#poolAddress!),
           this.#timeoutMs,
         );
+        const feeConfiguration = {
+          activationType: config.activationType,
+          baseFeeMode: config.poolFees.baseFee.baseFeeMode,
+          cliffFeeNumerator: config.poolFees.baseFee.cliffFeeNumerator.toString(),
+          collectFeeMode: config.collectFeeMode,
+          dynamicFeeEnabled: !config.poolFees.dynamicFee.binStep.isZero(),
+          migratedPoolFeeBps: config.migratedPoolFeeBps,
+          migrationOption: config.migrationOption,
+          migrationQuoteThreshold: config.migrationQuoteThreshold.toString(),
+        };
         market = Object.freeze({
+          baseReserve: pool.poolState.baseReserve.toString(),
           baseMint: pool.poolState.baseMint.toBase58(),
           configAddress: pool.poolState.config.toBase58(),
           curveProgress,
+          feeConfigurationHash: await canonicalSha256(feeConfiguration),
           isMigrated: pool.poolState.isMigrated !== 0,
           migrationProgress: pool.poolState.migrationProgress,
+          openingFeeBps: feeNumeratorToBps(
+            config.poolFees.baseFee.cliffFeeNumerator,
+          ),
+          quoteReserve: pool.poolState.quoteReserve.toString(),
           quoteMint: config.quoteMint.toBase58(),
         });
       }
@@ -189,7 +216,8 @@ export class MeteoraDbcAdapter {
           config: this.#configAddress,
           pool: this.#poolAddress,
           program: DYNAMIC_BONDING_CURVE_PROGRAM_ID.toBase58(),
-          quoteMint: SPCXX_MINT,
+          quoteDecimals: mint.instrument.decimals,
+          quoteMint: quoteMintAddress,
         }),
         attestation: evaluateDbcAttestation(input),
         market,

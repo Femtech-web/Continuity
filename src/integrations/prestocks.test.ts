@@ -15,6 +15,23 @@ const catalog = JSON.stringify([
     description: "SpaceX economic exposure.",
     external_url: pageUrl,
     contract_address: sourceMint,
+    image: "https://prestocks.test/logos/spacex.png",
+    markPrice: 148.17,
+    markValuation: 1_942_756_022_410,
+    tokenPrice: 117.47,
+    supply: 43_712.53,
+  },
+  {
+    name: "OpenAI PreStocks",
+    symbol: "OPENAI",
+    description: "OpenAI economic exposure.",
+    external_url: "https://prestocks.test/openai",
+    contract_address: "PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF",
+    image: "https://prestocks.test/logos/openai.png",
+    markPrice: 1023.23,
+    markValuation: 1_267_711_624_897,
+    tokenPrice: 1355.85,
+    supply: 2826.34,
   },
 ]);
 
@@ -57,6 +74,19 @@ test("captures the live-shaped SpaceX notice into a valid draft manifest", async
   assert.match(evidence.manifestSha256, /^[a-f0-9]{64}$/);
 });
 
+test("captures every valid catalog instrument with market fields intact", async () => {
+  const snapshot = await createAdapter().captureCatalog();
+
+  assert.equal(snapshot.assets.length, 2);
+  assert.deepEqual(
+    snapshot.assets.map((asset) => asset.symbol),
+    ["SPACEX", "OPENAI"],
+  );
+  assert.equal(snapshot.assets[0]?.markPrice, 148.17);
+  assert.equal(snapshot.assets[1]?.contractAddress, "PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF");
+  assert.match(snapshot.snapshotSha256, /^[a-f0-9]{64}$/);
+});
+
 test("refuses a page that no longer exposes the successor fact", async () => {
   await assert.rejects(
     createAdapter("<html><body>SpaceX page without a notice.</body></html>")
@@ -77,12 +107,21 @@ test("refuses an unreviewed successor mint even when the page shape is valid", a
 });
 
 test("classifies an absent catalogue instrument as unsupported", async () => {
+  const catalogWithoutSpaceX = JSON.stringify([
+    {
+      name: "OpenAI PreStocks",
+      symbol: "OPENAI",
+      description: "OpenAI economic exposure.",
+      external_url: "https://prestocks.test/openai",
+      contract_address: "PreweJYECqtQwBtpxHL171nL2K6umo692gTm7Q3rpgF",
+    },
+  ]);
   const adapter = new PreStocksAdapter({
     catalogUrl,
     pageUrl,
     fetchImplementation: async (input) =>
       String(input) === catalogUrl
-        ? new Response("[]", { status: 200 })
+        ? new Response(catalogWithoutSpaceX, { status: 200 })
         : new Response(lifecyclePage, { status: 200 }),
   });
 

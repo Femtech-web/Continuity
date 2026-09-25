@@ -1,0 +1,7 @@
+{
+  "name": "Continuity Sentinel",
+  "description": "Monitors stock-token lifecycle evidence and stock-quoted Meteora DBC markets without authorizing execution.",
+  "author": "Continuity",
+  "tags": ["solana", "prestocks", "clawpump", "meteora", "risk"],
+  "version": "1.0.0"
+}

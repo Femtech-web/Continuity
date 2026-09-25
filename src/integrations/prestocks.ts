@@ -19,12 +19,26 @@ interface PreStocksAdapterOptions {
   readonly now?: () => Date;
 }
 
-interface PreStocksCatalogItem {
+export interface PreStocksCatalogAsset {
   readonly name: string;
   readonly symbol: string;
   readonly description: string;
   readonly externalUrl: string;
+  readonly imageUrl: string | null;
   readonly contractAddress: string;
+  readonly markPrice: number | null;
+  readonly markValuation: number | null;
+  readonly supply: number | null;
+  readonly tokenPrice: number | null;
+}
+
+export interface PreStocksCatalogSnapshot {
+  readonly assets: readonly PreStocksCatalogAsset[];
+  readonly observedAt: string;
+  readonly publisher: "PreStocks";
+  readonly snapshotSha256: string;
+  readonly sourceContentSha256: string;
+  readonly sourceUrl: string;
 }
 
 export interface PreStocksSourceSnapshot {
@@ -90,7 +104,11 @@ function visibleText(html: string) {
   );
 }
 
-function parseCatalog(payload: unknown): PreStocksCatalogItem {
+function optionalNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function parseCatalog(payload: unknown): readonly PreStocksCatalogAsset[] {
   if (!Array.isArray(payload)) {
     throw new IntegrationError(
       "INVALID_RESPONSE",
@@ -98,30 +116,59 @@ function parseCatalog(payload: unknown): PreStocksCatalogItem {
       { retryable: true, status: 502 },
     );
   }
-  const match = payload.find(
-    (item) => isRecord(item) && item.symbol === "SPACEX",
-  );
-  if (
-    !isRecord(match) ||
-    typeof match.name !== "string" ||
-    typeof match.symbol !== "string" ||
-    typeof match.description !== "string" ||
-    typeof match.external_url !== "string" ||
-    typeof match.contract_address !== "string"
-  ) {
+  const assets = payload.map((item, index): PreStocksCatalogAsset => {
+    if (
+      !isRecord(item) ||
+      typeof item.name !== "string" ||
+      typeof item.symbol !== "string" ||
+      typeof item.description !== "string" ||
+      typeof item.external_url !== "string" ||
+      typeof item.contract_address !== "string" ||
+      !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(item.contract_address)
+    ) {
+      throw new IntegrationError(
+        "INVALID_RESPONSE",
+        `PreStocks catalogue item ${index} is missing required identity fields.`,
+        { retryable: true, status: 502 },
+      );
+    }
+
+    return Object.freeze({
+      name: item.name,
+      symbol: item.symbol,
+      description: item.description,
+      externalUrl: item.external_url,
+      imageUrl: typeof item.image === "string" ? item.image : null,
+      contractAddress: item.contract_address,
+      markPrice: optionalNumber(item.markPrice),
+      markValuation: optionalNumber(item.markValuation),
+      supply: optionalNumber(item.supply),
+      tokenPrice: optionalNumber(item.tokenPrice),
+    });
+  });
+
+  if (assets.length === 0) {
     throw new IntegrationError(
-      "UNSUPPORTED_ASSET",
-      "SPACEX is not present in the current PreStocks catalogue.",
-      { retryable: false, status: 404 },
+      "INVALID_RESPONSE",
+      "PreStocks catalogue returned no instruments.",
+      { retryable: true, status: 502 },
     );
   }
-  return {
-    name: match.name,
-    symbol: match.symbol,
-    description: match.description,
-    externalUrl: match.external_url,
-    contractAddress: match.contract_address,
-  };
+  return Object.freeze(assets);
+}
+
+function parseCatalogBody(body: string) {
+  let catalogPayload: unknown;
+  try {
+    catalogPayload = JSON.parse(body);
+  } catch {
+    throw new IntegrationError(
+      "INVALID_RESPONSE",
+      "PreStocks catalogue returned invalid JSON.",
+      { retryable: true, status: 502 },
+    );
+  }
+  return parseCatalog(catalogPayload);
 }
 
 function parseLifecycleNotice(html: string) {
@@ -217,24 +264,40 @@ export class PreStocksAdapter {
     this.#now = options.now ?? (() => new Date());
   }
 
+  async captureCatalog(): Promise<PreStocksCatalogSnapshot> {
+    const catalogBody = await this.#read(this.#catalogUrl);
+    const assets = parseCatalogBody(catalogBody);
+    const observedAt = this.#now().toISOString();
+    const sourceContentSha256 = await sha256Text(catalogBody);
+    const snapshotCore = {
+      assets,
+      observedAt,
+      publisher: "PreStocks" as const,
+      sourceContentSha256,
+      sourceUrl: this.#catalogUrl,
+    };
+
+    return Object.freeze({
+      ...snapshotCore,
+      snapshotSha256: await canonicalSha256(snapshotCore),
+    });
+  }
+
   async captureSpaceXEvidence(): Promise<PreStocksEvidenceBundle> {
     const [catalogBody, pageBody] = await Promise.all([
       this.#read(this.#catalogUrl),
       this.#read(this.#pageUrl),
     ]);
 
-    let catalogPayload: unknown;
-    try {
-      catalogPayload = JSON.parse(catalogBody);
-    } catch {
+    const catalogItems = parseCatalogBody(catalogBody);
+    const catalogItem = catalogItems.find((item) => item.symbol === "SPACEX");
+    if (!catalogItem) {
       throw new IntegrationError(
-        "INVALID_RESPONSE",
-        "PreStocks catalogue returned invalid JSON.",
-        { retryable: true, status: 502 },
+        "UNSUPPORTED_ASSET",
+        "SPACEX is not present in the current PreStocks catalogue.",
+        { retryable: false, status: 404 },
       );
     }
-
-    const catalogItem = parseCatalog(catalogPayload);
     const notice = parseLifecycleNotice(pageBody);
     if (
       catalogItem.contractAddress !== prestocksSpaceXMint ||

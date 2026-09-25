@@ -8,7 +8,7 @@ test("builds a deterministic unsigned stock-aware Meteora configuration", async 
 
   assert.equal(first.reviewState, "READY_FOR_REVIEW");
   assert.equal(first.signing.enabled, false);
-  assert.equal(first.calibration.quoteBaseUnits, "419991601");
+  assert.equal(first.calibration.quoteBaseUnits, "680223004");
   assert.equal(
     first.configuration.sdk.migrationQuoteThreshold,
     first.calibration.quoteBaseUnits,

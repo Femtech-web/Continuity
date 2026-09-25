@@ -12,13 +12,18 @@ test("uses the public mainnet RPC as a safe default", () => {
   assert.equal(environment.clawpump.apiKey, null);
   assert.equal(environment.clawpump.baseUrl, "https://clawpump.tech/api/v1");
   assert.equal(environment.cont.metadataUri, null);
+  assert.equal(environment.cont.operatorWallet, null);
+  assert.equal(environment.jupiter.apiKey, null);
+  assert.equal(environment.jupiter.baseUrl, "https://lite-api.jup.ag/");
   assert.equal(environment.meteora.configAddress, null);
   assert.equal(environment.meteora.poolAddress, null);
   assert.equal(environment.prestocks.catalogUrl, "https://prestocks.com/api/prestocks");
   assert.equal(environment.prestocks.pageUrl, "https://prestocks.com/spacex");
   assert.equal(environment.pyth.apiKey, null);
-  assert.equal(environment.pyth.feedId, 3329);
+  assert.equal(environment.pyth.feedId, 6);
   assert.equal(environment.pyth.channel, "fixed_rate@200ms");
+  assert.equal(environment.supabase.url, null);
+  assert.equal(environment.supabase.secretKey, null);
 });
 
 test("prefers a server-only RPC URL over the browser setting", () => {
@@ -32,13 +37,18 @@ test("prefers a server-only RPC URL over the browser setting", () => {
     CLAWPUMP_API_URL: "https://clawpump.example/api/v1",
     CLAWPUMP_TIMEOUT_MS: "9000",
     CONT_TOKEN_METADATA_URI: "https://continuity.example/metadata/cont.json",
+    CONT_OPERATOR_WALLET: "11111111111111111111111111111111",
     PRESTOCKS_CATALOG_URL: "https://source.example/catalog",
     PRESTOCKS_SPACEX_URL: "https://source.example/spacex",
     PRESTOCKS_TIMEOUT_MS: "3200",
     METEORA_DBC_CONFIG_ADDRESS: "11111111111111111111111111111111",
     PYTH_PRO_API_KEY: "server-secret",
     PYTH_PRO_BASE_URL: "https://pyth.example",
-    PYTH_SPCXX_USD_FEED_ID: "3329",
+    PYTH_SOL_USD_FEED_ID: "6",
+    JUPITER_API_URL: "https://jupiter.example",
+    JUPITER_API_KEY: "jup-secret",
+    SUPABASE_URL: "https://continuity.supabase.co",
+    SUPABASE_SECRET_KEY: "sb_secret_server-secret",
   });
 
   assert.equal(environment.solana.cluster, "devnet");
@@ -52,6 +62,7 @@ test("prefers a server-only RPC URL over the browser setting", () => {
     environment.cont.metadataUri,
     "https://continuity.example/metadata/cont.json",
   );
+  assert.equal(environment.cont.operatorWallet, "11111111111111111111111111111111");
   assert.equal(environment.prestocks.catalogUrl, "https://source.example/catalog");
   assert.equal(environment.prestocks.timeoutMs, 3_200);
   assert.equal(
@@ -60,6 +71,10 @@ test("prefers a server-only RPC URL over the browser setting", () => {
   );
   assert.equal(environment.pyth.apiKey, "server-secret");
   assert.equal(environment.pyth.baseUrl, "https://pyth.example/");
+  assert.equal(environment.jupiter.apiKey, "jup-secret");
+  assert.equal(environment.jupiter.baseUrl, "https://jupiter.example/");
+  assert.equal(environment.supabase.url, "https://continuity.supabase.co/");
+  assert.equal(environment.supabase.secretKey, "sb_secret_server-secret");
 });
 
 test("rejects unsupported clusters and unsafe URL protocols", () => {
@@ -76,8 +91,8 @@ test("rejects unsupported clusters and unsafe URL protocols", () => {
     /METEORA_DBC_POOL_ADDRESS/,
   );
   assert.throws(
-    () => readServerEnvironment({ PYTH_SPCXX_USD_FEED_ID: "SPCXx" }),
-    /PYTH_SPCXX_USD_FEED_ID/,
+    () => readServerEnvironment({ PYTH_SOL_USD_FEED_ID: "SOL" }),
+    /PYTH_SOL_USD_FEED_ID/,
   );
   assert.throws(
     () => readServerEnvironment({ CONT_TOKEN_METADATA_URI: "ipfs://cont" }),

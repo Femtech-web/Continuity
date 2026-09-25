@@ -15,6 +15,10 @@ test("builds a deterministic captured pre-approval plan", async () => {
   assert.equal(first.transaction.serialized, null);
   assert.equal(first.transaction.quoteMint, SPCXX_MINT);
   assert.equal(first.instructions.length, 2);
+  assert.deepEqual(
+    first.prerequisites.map((prerequisite) => prerequisite.state),
+    ["PASS", "PASS"],
+  );
   assert.ok(
     first.instructions.every(
       (instruction) =>

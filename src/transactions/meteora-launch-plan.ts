@@ -21,6 +21,7 @@ import type { ClawPumpLaunchAuthority } from "../integrations/clawpump.ts";
 import { IntegrationError } from "../integrations/integration-error.ts";
 import {
   buildContSpcxxSdkConfig,
+  buildStockQuotedSdkConfig,
   buildDemoLaunchReview,
   type MeteoraLaunchReview,
 } from "../integrations/meteora-launch-config.ts";
@@ -48,6 +49,15 @@ export interface LaunchAccountReview {
   readonly writable: boolean;
 }
 
+export interface LaunchPrerequisite {
+  readonly address: string;
+  readonly balanceLamports: number;
+  readonly detail: string;
+  readonly key: "CLAWPUMP_AGENT_ACCOUNT" | "OPERATOR_ACCOUNT";
+  readonly label: string;
+  readonly state: "MISSING" | "PASS";
+}
+
 export interface MeteoraLaunchPlan {
   readonly accounts: readonly LaunchAccountReview[];
   readonly approval: {
@@ -65,6 +75,7 @@ export interface MeteoraLaunchPlan {
   readonly instructions: readonly LaunchInstructionReview[];
   readonly mode: "CAPTURED_FIXTURE" | "LIVE_SIMULATION";
   readonly planHash: string;
+  readonly prerequisites: readonly LaunchPrerequisite[];
   readonly simulation: {
     readonly error: unknown | null;
     readonly logs: readonly string[];
@@ -80,6 +91,7 @@ export interface MeteoraLaunchPlan {
     readonly messageHash: string;
     readonly pool: string;
     readonly quoteMint: string;
+    readonly recentBlockhash: string | null;
     readonly serialized: string | null;
     readonly walletSignaturesMissing: readonly string[];
   };
@@ -91,6 +103,10 @@ interface BuildMeteoraLaunchPlanOptions {
   readonly metadataUri: string;
   readonly review: MeteoraLaunchReview;
   readonly rpcUrl: string;
+  readonly token?: {
+    readonly name: string;
+    readonly symbol: string;
+  };
   readonly timeoutMs?: number;
 }
 
@@ -147,8 +163,12 @@ function parsePublicKey(value: string, field: string): PublicKey {
   }
 }
 
-function deriveAddresses(config: PublicKey, baseMint: PublicKey): LaunchAddresses {
-  const quoteMint = new PublicKey(SPCXX_MINT);
+function deriveAddresses(
+  config: PublicKey,
+  baseMint: PublicKey,
+  quoteMintAddress = SPCXX_MINT,
+): LaunchAddresses {
+  const quoteMint = new PublicKey(quoteMintAddress);
   const pool = deriveDbcPoolAddress(quoteMint, baseMint, config);
   return Object.freeze({
     baseMint,
@@ -176,18 +196,20 @@ function addressRoles(
   addresses: LaunchAddresses,
   operator: PublicKey,
   agentWallet: PublicKey,
+  tokenSymbol = "CONT",
+  quoteSymbol = "SPCXx",
 ): ReadonlyMap<string, readonly string[]> {
   return new Map([
     [operator.toBase58(), ["Operator payer", "Pool creator"]],
     [agentWallet.toBase58(), ["ClawPump partner fee claimer", "Leftover receiver"]],
     [addresses.config.toBase58(), ["DBC config"]],
-    [addresses.baseMint.toBase58(), ["CONT mint"]],
-    [addresses.quoteMint.toBase58(), ["SPCXx quote mint"]],
+    [addresses.baseMint.toBase58(), [`${tokenSymbol} mint`]],
+    [addresses.quoteMint.toBase58(), [`${quoteSymbol} quote mint`]],
     [addresses.pool.toBase58(), ["DBC virtual pool"]],
-    [addresses.baseVault.toBase58(), ["CONT pool vault"]],
-    [addresses.quoteVault.toBase58(), ["SPCXx pool vault"]],
-    [addresses.metadata.toBase58(), ["CONT metadata"]],
-    [addresses.tokenBadge.toBase58(), ["SPCXx DBC badge"]],
+    [addresses.baseVault.toBase58(), [`${tokenSymbol} pool vault`]],
+    [addresses.quoteVault.toBase58(), [`${quoteSymbol} pool vault`]],
+    [addresses.metadata.toBase58(), [`${tokenSymbol} metadata`]],
+    [addresses.tokenBadge.toBase58(), [`${quoteSymbol} DBC badge`]],
   ]);
 }
 
@@ -196,6 +218,8 @@ export function inspectMeteoraLaunchTransaction(
   addresses: LaunchAddresses,
   operator: PublicKey,
   agentWallet: PublicKey,
+  tokenSymbol = "CONT",
+  quoteSymbol = "SPCXx",
 ): {
   readonly accounts: readonly LaunchAccountReview[];
   readonly instructions: readonly LaunchInstructionReview[];
@@ -211,7 +235,7 @@ export function inspectMeteoraLaunchTransaction(
       writableCount: instruction.keys.filter((account) => account.isWritable).length,
     }),
   );
-  const roles = addressRoles(addresses, operator, agentWallet);
+  const roles = addressRoles(addresses, operator, agentWallet, tokenSymbol, quoteSymbol);
   const created = new Set([
     addresses.baseMint.toBase58(),
     addresses.baseVault.toBase58(),
@@ -279,10 +303,19 @@ export async function buildMeteoraLaunchPlan(
   );
   const configKeypair = Keypair.generate();
   const baseMintKeypair = Keypair.generate();
-  const addresses = deriveAddresses(configKeypair.publicKey, baseMintKeypair.publicKey);
+  const design = options.review.configuration.design;
+  const token = options.token ?? { name: "Continuity", symbol: design.baseSymbol };
+  const addresses = deriveAddresses(
+    configKeypair.publicKey,
+    baseMintKeypair.publicKey,
+    design.quoteMint,
+  );
   const connection = new Connection(options.rpcUrl, "confirmed");
   const client = DynamicBondingCurveClient.create(connection, "confirmed");
-  const config = buildContSpcxxSdkConfig(options.review.calibration);
+  const config =
+    token.symbol === "CONT"
+      ? buildContSpcxxSdkConfig(options.review.calibration)
+      : buildStockQuotedSdkConfig(options.review.calibration, design);
   const timeoutMs = options.timeoutMs ?? 7_000;
 
   try {
@@ -295,9 +328,9 @@ export async function buildMeteoraLaunchPlan(
         payer: operator,
         preCreatePoolParam: {
           baseMint: baseMintKeypair.publicKey,
-          name: "Continuity",
+          name: token.name,
           poolCreator: operator,
-          symbol: "CONT",
+          symbol: token.symbol,
           uri: options.metadataUri,
         },
         quoteMint: addresses.quoteMint,
@@ -313,11 +346,43 @@ export async function buildMeteoraLaunchPlan(
     transaction.recentBlockhash = latestBlockhash.blockhash;
     transaction.partialSign(configKeypair, baseMintKeypair);
 
+    const [operatorAccount, agentAccount] = await withTimeout(
+      connection.getMultipleAccountsInfo([operator, agentWallet], "confirmed"),
+      timeoutMs,
+    );
+    const prerequisites: readonly LaunchPrerequisite[] = Object.freeze([
+      Object.freeze({
+        address: operator.toBase58(),
+        balanceLamports: operatorAccount?.lamports ?? 0,
+        detail: operatorAccount
+          ? "Connected payer account exists on Solana."
+          : "Fund the connected operator wallet with SOL before simulation.",
+        key: "OPERATOR_ACCOUNT" as const,
+        label: "Operator wallet",
+        state: operatorAccount ? ("PASS" as const) : ("MISSING" as const),
+      }),
+      Object.freeze({
+        address: agentWallet.toBase58(),
+        balanceLamports: agentAccount?.lamports ?? 0,
+        detail: agentAccount
+          ? "ClawPump fee-recipient account exists on Solana."
+          : "Fund the Continuity Sentinel wallet from ClawPump Wallet → Receive, then retry.",
+        key: "CLAWPUMP_AGENT_ACCOUNT" as const,
+        label: "ClawPump agent wallet",
+        state: agentAccount ? ("PASS" as const) : ("MISSING" as const),
+      }),
+    ]);
+    const missingPrerequisites = prerequisites.filter(
+      (prerequisite) => prerequisite.state === "MISSING",
+    );
+
     const review = inspectMeteoraLaunchTransaction(
       transaction,
       addresses,
       operator,
       agentWallet,
+      token.symbol,
+      design.quoteSymbol,
     );
     const simulationTransaction = new VersionedTransaction(
       transaction.compileMessage(),
@@ -325,15 +390,30 @@ export async function buildMeteoraLaunchPlan(
     simulationTransaction.signatures = transaction.signatures.map(
       (signature) => signature.signature ?? new Uint8Array(64),
     );
-    const simulationResponse = await withTimeout(
-      connection.simulateTransaction(simulationTransaction, {
-        commitment: "confirmed",
-        sigVerify: false,
-      }),
-      timeoutMs,
-    );
+    const simulationResponse =
+      missingPrerequisites.length === 0
+        ? await withTimeout(
+            connection.simulateTransaction(simulationTransaction, {
+              commitment: "confirmed",
+              sigVerify: false,
+            }),
+            timeoutMs,
+          )
+        : null;
     const messageHash = sha256(transaction.serializeMessage());
-    const simulationPassed = simulationResponse.value.err === null;
+    const simulationPassed = simulationResponse?.value.err === null;
+    const simulationError =
+      simulationResponse?.value.err ??
+      (missingPrerequisites.length > 0
+        ? {
+            code: "ACCOUNT_NOT_FOUND",
+            missingAccounts: missingPrerequisites.map((prerequisite) => ({
+              address: prerequisite.address,
+              key: prerequisite.key,
+              label: prerequisite.label,
+            })),
+          }
+        : null);
     const planHash = await canonicalSha256({
       accounts: review.accounts,
       authority: {
@@ -344,6 +424,7 @@ export async function buildMeteoraLaunchPlan(
       configurationHash: options.review.configuration.hash,
       instructions: review.instructions,
       messageHash,
+      prerequisites,
       schemaVersion: 1,
     });
 
@@ -354,7 +435,14 @@ export async function buildMeteoraLaunchPlan(
         reasons: Object.freeze(
           simulationPassed
             ? ["Human wallet approval is still required"]
-            : ["Solana simulation did not pass", "Wallet approval remains disabled"],
+            : missingPrerequisites.length > 0
+              ? [
+                  ...missingPrerequisites.map(
+                    (prerequisite) => `${prerequisite.label} is not funded on Solana`,
+                  ),
+                  "Simulation and wallet approval remain unavailable",
+                ]
+              : ["Solana simulation did not pass", "Wallet approval remains disabled"],
         ),
       }),
       authority: Object.freeze({
@@ -368,12 +456,13 @@ export async function buildMeteoraLaunchPlan(
       instructions: review.instructions,
       mode: "LIVE_SIMULATION" as const,
       planHash,
+      prerequisites,
       simulation: Object.freeze({
-        error: simulationResponse.value.err,
-        logs: Object.freeze(simulationResponse.value.logs ?? []),
-        slot: simulationResponse.context.slot,
+        error: simulationError,
+        logs: Object.freeze(simulationResponse?.value.logs ?? []),
+        slot: simulationResponse?.context.slot ?? null,
         state: simulationPassed ? ("PASSED" as const) : ("FAILED" as const),
-        unitsConsumed: simulationResponse.value.unitsConsumed ?? null,
+        unitsConsumed: simulationResponse?.value.unitsConsumed ?? null,
       }),
       transaction: Object.freeze({
         baseMint: addresses.baseMint.toBase58(),
@@ -383,6 +472,7 @@ export async function buildMeteoraLaunchPlan(
         messageHash,
         pool: addresses.pool.toBase58(),
         quoteMint: addresses.quoteMint.toBase58(),
+        recentBlockhash: latestBlockhash.blockhash,
         serialized: transaction
           .serialize({ requireAllSignatures: false, verifySignatures: false })
           .toString("base64"),
@@ -453,11 +543,30 @@ export async function buildDemoMeteoraLaunchPlan(): Promise<MeteoraLaunchPlan> {
     }),
   ]);
   const messageHash = sha256("captured:cont-spcxx:wallet-unsigned");
+  const prerequisites: readonly LaunchPrerequisite[] = Object.freeze([
+    Object.freeze({
+      address: operator.toBase58(),
+      balanceLamports: 50_000_000,
+      detail: "Captured operator account exists on Solana.",
+      key: "OPERATOR_ACCOUNT" as const,
+      label: "Operator wallet",
+      state: "PASS" as const,
+    }),
+    Object.freeze({
+      address: agentWallet.toBase58(),
+      balanceLamports: 1_000_000,
+      detail: "Captured ClawPump fee-recipient account exists on Solana.",
+      key: "CLAWPUMP_AGENT_ACCOUNT" as const,
+      label: "ClawPump agent wallet",
+      state: "PASS" as const,
+    }),
+  ]);
   const planHash = await canonicalSha256({
     accounts: accountFixture,
     configurationHash: review.configuration.hash,
     instructions,
     messageHash,
+    prerequisites,
     schemaVersion: 1,
   });
 
@@ -478,6 +587,7 @@ export async function buildDemoMeteoraLaunchPlan(): Promise<MeteoraLaunchPlan> {
     instructions,
     mode: "CAPTURED_FIXTURE" as const,
     planHash,
+    prerequisites,
     simulation: Object.freeze({
       error: null,
       logs: Object.freeze([
@@ -496,6 +606,7 @@ export async function buildDemoMeteoraLaunchPlan(): Promise<MeteoraLaunchPlan> {
       messageHash,
       pool: addresses.pool.toBase58(),
       quoteMint: addresses.quoteMint.toBase58(),
+      recentBlockhash: null,
       serialized: null,
       walletSignaturesMissing: Object.freeze([operator.toBase58()]),
     }),

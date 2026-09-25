@@ -1,8 +1,8 @@
 import type { StockReferenceSnapshot } from "../domain/continuity/stock-threshold.ts";
 import { IntegrationError } from "./integration-error.ts";
 
-export const SPCXX_USD_SYMBOL = "Crypto.SPCXX/USD";
-export const SPCXX_USD_FEED_ID = 3329;
+export const SOL_USD_SYMBOL = "Crypto.SOL/USD";
+export const SOL_USD_FEED_ID = 6;
 
 interface PythProAdapterOptions {
   readonly apiKey: string | null;
@@ -86,7 +86,7 @@ export class PythProAdapter {
     this.#timeoutMs = options.timeoutMs ?? 7_000;
   }
 
-  async getSpcxxUsdReference(): Promise<PythReferenceObservation> {
+  async getSolUsdReference(): Promise<PythReferenceObservation> {
     if (this.#apiKey === null) {
       throw new IntegrationError(
         "AUTH_REQUIRED",
@@ -123,11 +123,18 @@ export class PythProAdapter {
         signal: controller.signal,
       });
 
-      if (response.status === 401 || response.status === 403) {
+      if (response.status === 401) {
         throw new IntegrationError("AUTH_REQUIRED", "Pyth Pro rejected the configured API key.", {
           retryable: false,
           status: 503,
         });
+      }
+      if (response.status === 403) {
+        throw new IntegrationError(
+          "ENTITLEMENT_REQUIRED",
+          `The configured Pyth account is not entitled to feed ${this.#feedId} (${SOL_USD_SYMBOL}).`,
+          { retryable: false, status: 503 },
+        );
       }
       if (response.status === 429) {
         throw new IntegrationError("RATE_LIMITED", "Pyth Pro rate limit reached.", {
@@ -190,7 +197,7 @@ export class PythProAdapter {
           payloadTimestamp: microsToIso(payload.parsed.timestampUs, "timestampUs"),
           priceMantissa: integerString(feed.price, "price"),
           publisherCount: numberField(feed.publisherCount, "publisherCount"),
-          symbol: SPCXX_USD_SYMBOL,
+          symbol: SOL_USD_SYMBOL,
         }),
       });
     } catch (error) {

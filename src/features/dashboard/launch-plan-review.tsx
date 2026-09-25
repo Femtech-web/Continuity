@@ -32,9 +32,29 @@ function errorMessage(payload: unknown): string {
   return "The launch preflight could not be prepared.";
 }
 
+function simulationError(value: unknown): string {
+  if (value === null) return "No simulation error was returned.";
+  if (typeof value === "string") return value;
+  try { return JSON.stringify(value); } catch { return "The RPC returned an unreadable simulation error."; }
+}
+
+function formatSol(lamports: number): string {
+  return `${(lamports / 1_000_000_000).toLocaleString("en-US", {
+    maximumFractionDigits: 6,
+  })} SOL`;
+}
+
 export function LaunchPlanReview({
+  draftId,
   experience,
-}: Readonly<{ experience: DashboardExperience }>) {
+  marketLabel = "CONT / SPCXx",
+  onPreflightStateChange,
+}: Readonly<{
+  draftId?: string;
+  experience: DashboardExperience;
+  marketLabel?: string;
+  onPreflightStateChange?: (passed: boolean) => void;
+}>) {
   const wallet = useWalletAccess();
   const [state, setState] = useState<PlanState>(
     experience === "demo" ? { status: "loading" } : { status: "idle" },
@@ -52,7 +72,9 @@ export function LaunchPlanReview({
         const response = await fetch(
           experience === "demo"
             ? "/api/demo/launch-plan"
-            : "/api/v1/launch-plans/cont-spcxx/preview",
+            : draftId
+              ? `/api/v1/protected-market-drafts/${draftId}/preflight`
+              : "/api/v1/launch-plans/cont-spcxx/preview",
           experience === "demo"
             ? { cache: "no-store", signal }
             : {
@@ -77,7 +99,7 @@ export function LaunchPlanReview({
         });
       }
     },
-    [experience, wallet],
+    [draftId, experience, wallet],
   );
 
   useEffect(() => {
@@ -109,9 +131,19 @@ export function LaunchPlanReview({
     return () => controller.abort();
   }, [experience]);
 
+  useEffect(() => {
+    onPreflightStateChange?.(
+      state.status === "ready" &&
+        state.plan.simulation.state !== "FAILED" &&
+        state.plan.approval.enabled,
+    );
+  }, [onPreflightStateChange, state]);
+
   const statusLabel =
     state.status === "ready"
-      ? state.plan.mode === "CAPTURED_FIXTURE"
+      ? state.plan.prerequisites.some((prerequisite) => prerequisite.state === "MISSING")
+        ? "Setup required"
+        : state.plan.mode === "CAPTURED_FIXTURE"
         ? "Captured preflight"
         : state.plan.simulation.state
       : state.status;
@@ -191,12 +223,46 @@ export function LaunchPlanReview({
             </div>
             <div>
               <span>Resulting market</span>
-              <strong>CONT / SPCXx</strong>
+              <strong>{marketLabel}</strong>
               <code title={state.plan.transaction.pool}>
                 {shortAddress(state.plan.transaction.pool)}
               </code>
             </div>
           </div>
+
+          <section className={styles.preflightPrerequisites} aria-label="Wallet prerequisites">
+            <div className={styles.preflightPrerequisitesHeader}>
+              <div>
+                <span>Before simulation</span>
+                <strong>Wallet readiness</strong>
+              </div>
+              <small>
+                These accounts must exist on Solana. The operator wallet pays the
+                launch costs; the ClawPump wallet receives its configured partner roles.
+              </small>
+            </div>
+            <div className={styles.prerequisiteList}>
+              {state.plan.prerequisites.map((prerequisite) => (
+                <div key={prerequisite.key}>
+                  <span
+                    className={
+                      prerequisite.state === "PASS"
+                        ? styles.prerequisitePass
+                        : styles.prerequisiteMissing
+                    }
+                  >
+                    {prerequisite.state === "PASS" ? "Ready" : "Action required"}
+                  </span>
+                  <div>
+                    <strong>{prerequisite.label}</strong>
+                    <p>{prerequisite.detail}</p>
+                    <code title={prerequisite.address}>{shortAddress(prerequisite.address)}</code>
+                  </div>
+                  <small>{formatSol(prerequisite.balanceLamports)}</small>
+                </div>
+              ))}
+            </div>
+          </section>
 
           <div className={styles.transactionBody}>
             <section className={styles.instructionReview}>
@@ -264,7 +330,13 @@ export function LaunchPlanReview({
                   ? "Captured simulation passed"
                   : state.plan.simulation.state === "PASSED"
                     ? "Live simulation passed"
-                    : "Live simulation failed"}
+                    : state.plan.prerequisites.some(
+                          (prerequisite) => prerequisite.state === "MISSING",
+                        )
+                      ? "Waiting for wallet setup"
+                    : state.plan.simulation.unitsConsumed === null || state.plan.simulation.unitsConsumed === 0
+                      ? "Preflight stopped before execution"
+                      : "Live simulation failed"}
               </span>
               <code>
                 {state.plan.simulation.unitsConsumed?.toLocaleString() ?? "—"} compute units
@@ -274,13 +346,32 @@ export function LaunchPlanReview({
               <span>
                 <strong>
                   {state.plan.approval.enabled
-                    ? "Ready for deliberate approval"
+                    ? "Simulation passed"
                     : "Wallet approval unavailable"}
                 </strong>
-                No signature has been requested or submitted.
+                {state.plan.approval.enabled
+                  ? "The final wallet-signing and submission step is not enabled in this build."
+                  : "No signature has been requested or submitted."}
               </span>
             </div>
           </div>
+          {state.plan.simulation.state === "FAILED" ? (
+            <details className={styles.simulationDiagnostics}>
+              <summary>View simulation diagnostics</summary>
+              <p>
+                {state.plan.prerequisites.some(
+                  (prerequisite) => prerequisite.state === "MISSING",
+                )
+                  ? "Simulation did not run because one or more required wallets do not yet exist on Solana. Complete the wallet-readiness actions above and retry."
+                  : simulationError(state.plan.simulation.error)}
+              </p>
+              {state.plan.simulation.logs.length > 0 ? (
+                <pre>{state.plan.simulation.logs.slice(-8).join("\n")}</pre>
+              ) : (
+                <small>No program logs were produced. The request stopped before instruction execution.</small>
+              )}
+            </details>
+          ) : null}
         </>
       ) : null}
     </article>

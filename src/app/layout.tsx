@@ -4,6 +4,17 @@ import "@fontsource-variable/manrope";
 import { Providers } from "./providers";
 import "./globals.css";
 
+function metadataBase(): URL {
+  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (configuredUrl) return new URL(configuredUrl);
+
+  const vercelHost =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL;
+  if (vercelHost) return new URL(`https://${vercelHost}`);
+
+  return new URL("http://localhost:3000");
+}
+
 export const metadata: Metadata = {
   title: {
     default: "Continuity — Lifecycle safety for stock-quoted markets",
@@ -11,7 +22,7 @@ export const metadata: Metadata = {
   },
   description:
     "Lifecycle controls for ClawPump agents and Meteora DBC markets built around tokenized-stock quote assets.",
-  metadataBase: new URL("https://continuity.finance"),
+  metadataBase: metadataBase(),
   openGraph: {
     title: "Continuity — Lifecycle safety for stock-quoted markets",
     description:

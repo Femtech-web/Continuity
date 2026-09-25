@@ -23,16 +23,42 @@ const verdictCopy: Record<
     detail: "One or more identity checks failed.",
   },
   CONFIG_ATTESTED: {
-    label: "Config attested",
-    detail: "The reviewed config is onchain; pool launch is pending.",
+    label: "Configuration verified",
+    detail: "The reviewed market configuration is live; liquidity is pending.",
   },
   POOL_LIVE: {
-    label: "Pool live",
-    detail: "The pool and its reviewed config are linked onchain.",
+    label: "Market is live",
+    detail: "The liquidity market uses the reviewed SPCXx configuration.",
   },
   QUOTE_READY: {
-    label: "Quote asset verified",
-    detail: "SPCXx is eligible; no Continuity config has been submitted.",
+    label: "SPCXx is eligible",
+    detail: "The quote asset passed. No Continuity market has been launched.",
+  },
+};
+
+const checkCopy: Record<
+  DbcAttestationCheck["key"],
+  { readonly detail: string; readonly label: string }
+> = {
+  "quote-mint": {
+    label: "Asset identity",
+    detail: "Exact SPCXx mint confirmed",
+  },
+  badge: {
+    label: "Market eligibility",
+    detail: "Approved for a Meteora quote market",
+  },
+  "transfer-fee": {
+    label: "Transfer policy",
+    detail: "Compatible with the planned market",
+  },
+  config: {
+    label: "Market configuration",
+    detail: "Not created yet",
+  },
+  pool: {
+    label: "Liquidity market",
+    detail: "Not live yet",
   },
 };
 
@@ -102,8 +128,8 @@ export function LiveDbcAttestation() {
       <div className={styles.panelHeader}>
         <div className={styles.panelTitle}>
           <div>
-            <span>Meteora DBC</span>
-            <strong>Quote-rail attestation</strong>
+            <span>Live market check</span>
+            <strong>Successor quote asset</strong>
           </div>
         </div>
         <span className={styles.panelTag}>
@@ -149,17 +175,26 @@ export function LiveDbcAttestation() {
                   <ProductIcon name={iconForCheck(check)} />
                 </span>
                 <div>
-                  <strong>{check.label}</strong>
-                  <span>{check.detail}</span>
+                  <strong>{checkCopy[check.key].label}</strong>
+                  <span>{checkCopy[check.key].detail}</span>
                 </div>
-                <small>{check.state}</small>
+                <small>
+                  {check.state === "PASS"
+                    ? "Verified"
+                    : check.state === "FAIL"
+                      ? "Blocked"
+                      : "Pending"}
+                </small>
               </div>
             ))}
           </div>
-          <div className={styles.attestationMeta}>
-            <span>Program {abbreviate(state.observation.addresses.program)}</span>
-            <span>Slot {state.observation.provenance.slot.toLocaleString()}</span>
-          </div>
+          <details className={styles.attestationMeta}>
+            <summary>Verification details</summary>
+            <div>
+              <span>Program {abbreviate(state.observation.addresses.program)}</span>
+              <span>Slot {state.observation.provenance.slot.toLocaleString()}</span>
+            </div>
+          </details>
         </>
       ) : null}
     </article>

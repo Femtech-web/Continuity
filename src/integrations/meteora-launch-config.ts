@@ -14,14 +14,19 @@ import {
 } from "@meteora-ag/dynamic-bonding-curve-sdk";
 import { canonicalSha256 } from "../domain/continuity/canonical-json.ts";
 import {
+  buildCompositeMarketReference,
+  type CompositeMarketReference,
+} from "../domain/continuity/composite-market-reference.ts";
+import {
   calibrateStockThreshold,
-  evaluateStockReference,
-  type ReferenceEvaluation,
-  type StockReferenceSnapshot,
   type StockThresholdCalibration,
 } from "../domain/continuity/stock-threshold.ts";
+import {
+  buildStockAwareDbcPolicy,
+  type StockAwareDbcPolicy,
+} from "../domain/continuity/stock-aware-dbc-policy.ts";
 import { SPCXX_MINT } from "./meteora-dbc.ts";
-import type { PythReferenceObservation } from "./pyth-pro.ts";
+import { USDC_MINT, WRAPPED_SOL_MINT } from "./jupiter-quote.ts";
 
 const CONT_TARGET_SUPPLY = 1_000_000_000;
 const QUOTE_DECIMALS = 8;
@@ -34,7 +39,7 @@ export interface MeteoraLaunchReview {
       readonly activation: "TIMESTAMP";
       readonly authority: "IMMUTABLE";
       readonly baseDecimals: 6;
-      readonly baseSymbol: "CONT";
+      readonly baseSymbol: string;
       readonly baseTokenProgram: "SPL_TOKEN";
       readonly bondingFee: {
         readonly durationSeconds: 900;
@@ -55,7 +60,7 @@ export interface MeteoraLaunchReview {
       readonly percentageSupplyOnMigration: 20;
       readonly poolCreationFeeSol: 0;
       readonly quoteMint: string;
-      readonly quoteSymbol: "SPCXx";
+      readonly quoteSymbol: string;
       readonly targetSupply: number;
     };
     readonly hash: string;
@@ -72,17 +77,12 @@ export interface MeteoraLaunchReview {
     readonly status: "DRAFT_UNSIGNED";
   };
   readonly reference: {
-    readonly evaluation: ReferenceEvaluation;
-    readonly mode: "DEMO_FIXTURE" | "LIVE_PYTH_PRO";
-    readonly provenance: PythReferenceObservation["provenance"] | {
-      readonly authenticated: false;
-      readonly channel: "fixed_rate@200ms";
-      readonly endpointHost: "fixture.local";
-      readonly retrievedAt: string;
-      readonly source: "DEMO_FIXTURE";
-    };
-    readonly snapshot: StockReferenceSnapshot;
+    readonly evaluation: CompositeMarketReference["evaluation"];
+    readonly mode: "DEMO_FIXTURE" | "LIVE_COMPOSITE";
+    readonly provenance: CompositeMarketReference["provenance"];
+    readonly snapshot: CompositeMarketReference["snapshot"];
   };
+  readonly policy: StockAwareDbcPolicy;
   readonly reviewState: "BLOCKED" | "READY_FOR_REVIEW";
   readonly signing: {
     readonly enabled: false;
@@ -91,20 +91,21 @@ export interface MeteoraLaunchReview {
 }
 
 interface BuildLaunchReviewOptions {
-  readonly evaluatedAt: string;
+  readonly baseSymbol?: string;
   readonly mode: MeteoraLaunchReview["reference"]["mode"];
-  readonly observation: {
-    readonly provenance: MeteoraLaunchReview["reference"]["provenance"];
-    readonly snapshot: StockReferenceSnapshot;
-  };
+  readonly observation: CompositeMarketReference;
+  readonly targetSupply?: number;
 }
 
-export function buildContSpcxxDesign() {
+export function buildStockQuotedDesign(options: {
+  readonly baseSymbol: string;
+  readonly targetSupply: number;
+}) {
   return {
     activation: "TIMESTAMP",
     authority: "IMMUTABLE",
     baseDecimals: 6,
-    baseSymbol: "CONT",
+    baseSymbol: options.baseSymbol,
     baseTokenProgram: "SPL_TOKEN",
     bondingFee: {
       durationSeconds: 900,
@@ -126,15 +127,21 @@ export function buildContSpcxxDesign() {
     poolCreationFeeSol: 0,
     quoteMint: SPCXX_MINT,
     quoteSymbol: "SPCXx",
-    targetSupply: CONT_TARGET_SUPPLY,
+    targetSupply: options.targetSupply,
   } as const;
 }
 
-export function buildContSpcxxSdkConfig(
-  calibration: StockThresholdCalibration,
-): ConfigParameters {
-  const design = buildContSpcxxDesign();
+export function buildContSpcxxDesign() {
+  return buildStockQuotedDesign({
+    baseSymbol: "CONT",
+    targetSupply: CONT_TARGET_SUPPLY,
+  });
+}
 
+export function buildStockQuotedSdkConfig(
+  calibration: StockThresholdCalibration,
+  design: MeteoraLaunchReview["configuration"]["design"],
+): ConfigParameters {
   return buildCurve({
     activationType: ActivationType.Timestamp,
     fee: {
@@ -191,26 +198,26 @@ export function buildContSpcxxSdkConfig(
   });
 }
 
-export async function buildContSpcxxLaunchReview(
+export function buildContSpcxxSdkConfig(
+  calibration: StockThresholdCalibration,
+): ConfigParameters {
+  return buildStockQuotedSdkConfig(calibration, buildContSpcxxDesign());
+}
+
+export async function buildStockQuotedLaunchReview(
   options: BuildLaunchReviewOptions,
 ): Promise<MeteoraLaunchReview> {
-  const referenceEvaluation = evaluateStockReference(
-    options.observation.snapshot,
-    {
-      expectedFeedId: 3329,
-      expectedSymbol: "Crypto.SPCXX/USD",
-      maxAgeSeconds: 60,
-      maxConfidenceBps: 100,
-      minPublishers: 3,
-    },
-    options.evaluatedAt,
-  );
-  const calibration = calibrateStockThreshold(options.observation.snapshot, {
+  const referenceEvaluation = options.observation.evaluation;
+  const calibration = calibrateStockThreshold(options.observation.snapshot.selectedPrice, {
     quoteDecimals: QUOTE_DECIMALS,
     targetUsd: TARGET_USD,
   });
-  const design = buildContSpcxxDesign();
-  const config = buildContSpcxxSdkConfig(calibration);
+  const design = buildStockQuotedDesign({
+    baseSymbol: options.baseSymbol ?? "CONT",
+    targetSupply: options.targetSupply ?? CONT_TARGET_SUPPLY,
+  });
+  const policy = buildStockAwareDbcPolicy();
+  const config = buildStockQuotedSdkConfig(calibration, design);
 
   const sdk = {
     curve: config.curve.map((point: { liquidity: { toString(): string }; sqrtPrice: { toString(): string } }) => ({
@@ -230,8 +237,9 @@ export async function buildContSpcxxLaunchReview(
   const hash = await canonicalSha256({
     calibration,
     design,
-    reference: options.observation.snapshot,
-    schemaVersion: 1,
+    policy,
+    reference: options.observation,
+    schemaVersion: 2,
     sdk,
   });
   const referenceReady = referenceEvaluation.verdict === "READY";
@@ -250,11 +258,12 @@ export async function buildContSpcxxLaunchReview(
       provenance: options.observation.provenance,
       snapshot: options.observation.snapshot,
     }),
+    policy,
     reviewState: referenceReady ? "READY_FOR_REVIEW" : "BLOCKED",
     signing: Object.freeze({
       enabled: false as const,
       reasons: Object.freeze([
-        ...(referenceReady ? [] : ["Pyth reference policy has not passed"]),
+        ...(referenceReady ? [] : ["Composite market-reference policy has not passed"]),
         "ClawPump authority mapping is not verified",
         "Transaction has not been built or simulated",
         "Human launch approval is required",
@@ -263,30 +272,79 @@ export async function buildContSpcxxLaunchReview(
   });
 }
 
+export async function buildContSpcxxLaunchReview(
+  options: BuildLaunchReviewOptions,
+): Promise<MeteoraLaunchReview> {
+  return buildStockQuotedLaunchReview({
+    ...options,
+    baseSymbol: "CONT",
+    targetSupply: CONT_TARGET_SUPPLY,
+  });
+}
+
 export async function buildDemoLaunchReview(): Promise<MeteoraLaunchReview> {
-  const retrievedAt = "2026-09-24T09:41:09.000Z";
-  return buildContSpcxxLaunchReview({
-    evaluatedAt: retrievedAt,
-    mode: "DEMO_FIXTURE",
-    observation: {
+  const retrievedAt = "2026-09-24T13:45:33.935Z";
+  const observation = buildCompositeMarketReference({
+    evaluatedAt: "2026-09-24T13:45:34.329Z",
+    jupiter: {
+      provenance: {
+        authenticated: false,
+        endpointHost: "lite-api.jup.ag",
+        retrievedAt,
+        source: "JUPITER_SWAP_QUOTE",
+      },
+      solQuote: {
+        contextSlot: 450046343,
+        inputAmount: "100000000",
+        inputMint: SPCXX_MINT,
+        outputAmount: "1281880000",
+        outputMint: WRAPPED_SOL_MINT,
+        retrievedAt: "2026-09-24T13:45:33.911Z",
+        route: [{
+          ammKey: "8a1ozhQR5EMmbkDRwvpPCTQCwHouS5mRmGBr7PcDokUa",
+          inputMint: SPCXX_MINT,
+          label: "Scorch",
+          outputMint: WRAPPED_SOL_MINT,
+        }],
+      },
+      usdQuote: {
+        contextSlot: 450046343,
+        inputAmount: "100000000",
+        inputMint: SPCXX_MINT,
+        outputAmount: "147137185",
+        outputMint: USDC_MINT,
+        retrievedAt,
+        route: [{
+          ammKey: "ASAxmEaTT1HFe3mVC3zbKDE4tuB28W7732XQrEMBM5W2",
+          inputMint: SPCXX_MINT,
+          label: "Whirlpool",
+          outputMint: USDC_MINT,
+        }],
+      },
+    },
+    pyth: {
       provenance: {
         authenticated: false,
         channel: "fixed_rate@200ms",
         endpointHost: "fixture.local",
-        retrievedAt,
+        retrievedAt: "2026-09-24T13:45:34.329Z",
         source: "DEMO_FIXTURE",
       },
       snapshot: {
-        confidenceMantissa: "22000000",
+        confidenceMantissa: "1640100",
         exponent: -8,
-        feedId: 3329,
-        feedUpdatedAt: "2026-09-24T09:41:05.000Z",
+        feedId: 6,
+        feedUpdatedAt: "2026-09-24T13:45:34.200Z",
         marketSession: "regular",
-        payloadTimestamp: "2026-09-24T09:41:05.100Z",
-        priceMantissa: "23810000000",
-        publisherCount: 4,
-        symbol: "Crypto.SPCXX/USD",
+        payloadTimestamp: "2026-09-24T13:45:34.200Z",
+        priceMantissa: "11468359902",
+        publisherCount: 18,
+        symbol: "Crypto.SOL/USD",
       },
     },
+  });
+  return buildContSpcxxLaunchReview({
+    mode: "DEMO_FIXTURE",
+    observation,
   });
 }

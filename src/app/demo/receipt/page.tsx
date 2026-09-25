@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DashboardShell } from "@/features/dashboard/dashboard-shell";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Decision receipt",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function DemoReceiptPage() {
-  return <DashboardShell experience="demo" view="receipt" />;
+  redirect("/demo/activity");
 }

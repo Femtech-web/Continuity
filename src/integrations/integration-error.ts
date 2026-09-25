@@ -2,6 +2,7 @@ export type IntegrationErrorCode =
   | "ACCOUNT_NOT_FOUND"
   | "AUTH_REQUIRED"
   | "CONFIG_REQUIRED"
+  | "ENTITLEMENT_REQUIRED"
   | "INVALID_ADDRESS"
   | "INVALID_RESPONSE"
   | "RATE_LIMITED"

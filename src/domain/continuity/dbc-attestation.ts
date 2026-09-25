@@ -114,7 +114,7 @@ export function evaluateDbcAttestation(
       label: "Quote mint",
       state: quoteMintPass ? "PASS" : "FAIL",
       detail: quoteMintPass
-        ? "Exact SPCXx Token-2022 mint"
+        ? "Exact Token-2022 quote mint"
         : "Mint identity or token program mismatch",
     },
     {
@@ -122,7 +122,7 @@ export function evaluateDbcAttestation(
       label: "Meteora badge",
       state: badgePass ? "PASS" : "FAIL",
       detail: badgePass
-        ? "Official DBC badge decodes to SPCXx"
+        ? "Official DBC badge decodes to the quote mint"
         : "Required quote-mint badge is missing or mismatched",
     },
     {

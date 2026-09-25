@@ -78,7 +78,7 @@ export function LaunchReview({ experience }: LaunchReviewProps) {
           {state.status === "ready"
             ? state.review.reference.mode === "DEMO_FIXTURE"
               ? "Captured fixture"
-              : "Live Pyth Pro"
+              : "Live composite"
             : state.status}
         </span>
       </div>
@@ -101,7 +101,7 @@ export function LaunchReview({ experience }: LaunchReviewProps) {
             <p>{state.message}</p>
           </div>
           {experience === "mainnet" ? (
-            <Link href="/demo/market">
+            <Link href="/demo/launch">
               View captured review <ProductIcon name="arrow-right" />
             </Link>
           ) : null}
@@ -115,15 +115,15 @@ export function LaunchReview({ experience }: LaunchReviewProps) {
               <span>SPCXx / USD reference</span>
               <strong>
                 ${formatMantissa(
-                  state.review.reference.snapshot.priceMantissa,
-                  state.review.reference.snapshot.exponent,
+                  state.review.reference.snapshot.selectedPrice.priceMantissa,
+                  state.review.reference.snapshot.selectedPrice.exponent,
                 )}
               </strong>
               <small>
-                Feed {state.review.reference.snapshot.feedId} · {state.review.reference.snapshot.marketSession} · {state.review.reference.snapshot.publisherCount} publishers
+                Jupiter direct routes · Pyth SOL/USD cross-check
               </small>
               <small>
-                {state.review.reference.evaluation.confidenceBps} bps confidence · {state.review.reference.evaluation.ageSeconds}s old
+                {state.review.reference.evaluation.deviationBps} bps route divergence · {state.review.reference.snapshot.pythSolUsd.publisherCount} Pyth publishers
               </small>
             </div>
             <div className={styles.calibrationResult}>
@@ -170,6 +170,20 @@ export function LaunchReview({ experience }: LaunchReviewProps) {
             </div>
           </div>
 
+          <section className={styles.dbcPolicy} aria-label="Equity Continuity DBC policy">
+            <div>
+              <span>Equity Continuity v1</span>
+              <strong>Stock-aware market policy</strong>
+              <p>The launch configuration and lifecycle controls are committed into the same review hash.</p>
+            </div>
+            <dl>
+              <div><dt>Price discovery</dt><dd>100 → 25 bps, then dynamic</dd></div>
+              <div><dt>Graduation</dt><dd>$1,000 executable reference</dd></div>
+              <div><dt>Lifecycle</dt><dd>Exact mint · source-backed successor</dd></div>
+              <div><dt>After launch</dt><dd>Curve, migration, and reference monitored</dd></div>
+            </dl>
+          </section>
+
           <div className={styles.launchReviewFooter}>
             <div>
               <span
@@ -191,8 +205,8 @@ export function LaunchReview({ experience }: LaunchReviewProps) {
             <div className={styles.signingDisabled}>
               <ProductIcon name="shield" />
               <span>
-                <strong>Signing disabled</strong>
-                Authority review and simulation are still required.
+                <strong>Preflight required</strong>
+                Wallet approval unlocks only after a fresh simulation passes.
               </span>
             </div>
           </div>

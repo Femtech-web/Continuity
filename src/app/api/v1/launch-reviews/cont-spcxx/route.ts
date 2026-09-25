@@ -1,5 +1,7 @@
 import { readServerEnvironment } from "@/config/server-environment";
+import { CompositeMarketReferenceAdapter } from "@/integrations/composite-market-reference";
 import { integrationErrorResponse } from "@/integrations/integration-error";
+import { JupiterQuoteAdapter } from "@/integrations/jupiter-quote";
 import { buildContSpcxxLaunchReview } from "@/integrations/meteora-launch-config";
 import { PythProAdapter } from "@/integrations/pyth-pro";
 
@@ -15,10 +17,13 @@ export async function GET() {
       feedId: environment.pyth.feedId,
       timeoutMs: environment.pyth.timeoutMs,
     });
-    const observation = await pyth.getSpcxxUsdReference();
+    const marketReference = new CompositeMarketReferenceAdapter({
+      jupiter: new JupiterQuoteAdapter(environment.jupiter),
+      pyth,
+    });
+    const observation = await marketReference.getSpcxxUsdReference();
     const review = await buildContSpcxxLaunchReview({
-      evaluatedAt: observation.provenance.retrievedAt,
-      mode: "LIVE_PYTH_PRO",
+      mode: "LIVE_COMPOSITE",
       observation,
     });
 

@@ -12,6 +12,7 @@ export type QuoteRailReasonCode =
   | "LIFECYCLE_EVIDENCE_MISSING"
   | "LIFECYCLE_EVIDENCE_CONFLICTED"
   | "LIFECYCLE_EVIDENCE_STALE"
+  | "LIFECYCLE_REVIEW_REQUIRED"
   | "QUOTE_INSTRUMENT_RETIRING"
   | "QUOTE_INSTRUMENT_SUPERSEDED"
   | "MARKET_REFERENCE_UNAVAILABLE"
@@ -43,7 +44,12 @@ export interface QuoteRailEvaluationInput {
     readonly id: string;
     readonly version: number;
     readonly hash: string;
-    readonly evidenceStatus: "VERIFIED" | "STALE" | "MISSING" | "CONFLICTED";
+    readonly evidenceStatus:
+      | "VERIFIED"
+      | "UNREVIEWED"
+      | "STALE"
+      | "MISSING"
+      | "CONFLICTED";
   };
   readonly marketReference: {
     readonly status: "FRESH" | "STALE" | "MISSING" | "CLOSED";
@@ -142,6 +148,8 @@ export function evaluateQuoteRail(
     reasons.push("LIFECYCLE_EVIDENCE_CONFLICTED");
   } else if (input.manifest.evidenceStatus === "STALE") {
     reasons.push("LIFECYCLE_EVIDENCE_STALE");
+  } else if (input.manifest.evidenceStatus === "UNREVIEWED") {
+    reasons.push("LIFECYCLE_REVIEW_REQUIRED");
   }
 
   const instrumentLifecycleReason = lifecycleReason(
@@ -203,4 +211,3 @@ export function evaluateQuoteRail(
     evaluatedAt: input.evaluatedAt,
   };
 }
-

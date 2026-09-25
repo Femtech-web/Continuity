@@ -14,6 +14,7 @@ target/
 .anchor/
 test-ledger/
 coverage/
+.continuity-data/
 *.tsbuildinfo
 *.log
 .DS_Store
