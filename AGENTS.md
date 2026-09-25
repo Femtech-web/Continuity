@@ -1,9 +1,9 @@
 # Continuity agent instructions
 
 Read `README.md` and `docs/product-flow.md` before changing product behavior,
-architecture, integrations, economic design, or the demo. Use
-`docs/submission-test-runbook.md` for release verification and
-`docs/mainnet-transaction-evidence.md` for confirmed public-chain claims.
+architecture, integrations, or economic design. Use
+`docs/mainnet-transaction-evidence.md` for confirmed public-chain claims and
+`docs/external-agent-access.md` for external integration evidence.
 
 - Keep product language traceable to an issuer source, live RPC read, database
   record, or confirmed transaction.

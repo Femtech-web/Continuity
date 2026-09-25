@@ -51,14 +51,11 @@ owned ClawPump agent + new agent token + verified stock quote
 **Start here:** [`docs/product-flow.md`](docs/product-flow.md) explains the
 complete product in plain language: who uses it, where each token comes from,
 why only `SPCXx` is currently launch-ready, what the launch creates, what users
-do after launch, and which boundaries remain. For final verification, use
-[`docs/submission-test-runbook.md`](docs/submission-test-runbook.md). Confirmed
-mainnet proof is indexed in
+do after launch, and which boundaries remain. Confirmed mainnet proof is indexed in
 [`docs/mainnet-transaction-evidence.md`](docs/mainnet-transaction-evidence.md).
 External MCP, ClawPump skill, and x402 verification is documented in
 [`docs/external-agent-access.md`](docs/external-agent-access.md). The website
-also includes a concise, single-page guide at `/docs`; the view-only submission
-walkthrough is [`docs/demo-video-script.md`](docs/demo-video-script.md).
+also includes a concise, single-page guide at `/docs`.
 
 ## Contents
 
@@ -544,8 +541,6 @@ Independent finalized RPC reads confirm that the mint exists under the SPL Token
 program and that the configuration and virtual pool exist under Meteora DBC.
 The complete human-readable record is in
 [`docs/mainnet-transaction-evidence.md`](docs/mainnet-transaction-evidence.md).
-The shortest production validation sequence is in
-[`docs/submission-test-runbook.md`](docs/submission-test-runbook.md).
 
 ## Persistence and ownership
 
@@ -715,8 +710,8 @@ The first-party reference settings are:
 Set `SOLANA_RPC_URL` to a reliable mainnet RPC for server reads and
 `NEXT_PUBLIC_SOLANA_RPC_URL` to a browser-safe mainnet RPC for wallet actions.
 `JUPITER_API_KEY` remains optional. The exact copyable checklist and public
-mainnet addresses are in
-[`docs/submission-test-runbook.md`](docs/submission-test-runbook.md).
+mainnet addresses are documented in [`docs/product-flow.md`](docs/product-flow.md)
+and [`docs/mainnet-transaction-evidence.md`](docs/mainnet-transaction-evidence.md).
 
 ## Mainnet launch prerequisites
 

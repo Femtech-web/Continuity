@@ -303,9 +303,9 @@ operational:
 2. resolve the ClawPump gateway's mainnet/devnet settlement mismatch, then
    complete one paid x402 request.
 
-The exact sequence and expected evidence are in
-[`submission-test-runbook.md`](submission-test-runbook.md). Mainnet signatures
-belong in [`mainnet-transaction-evidence.md`](mainnet-transaction-evidence.md).
+External-agent evidence belongs in
+[`external-agent-access.md`](external-agent-access.md). Mainnet signatures belong
+in [`mainnet-transaction-evidence.md`](mainnet-transaction-evidence.md).
 
 ## Sponsor and infrastructure roles
 
