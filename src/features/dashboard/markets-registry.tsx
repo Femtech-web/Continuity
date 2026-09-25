@@ -12,6 +12,7 @@ import { EvidenceRecord } from "./evidence-record";
 import { LiveEvidenceRecord } from "./live-evidence-record";
 import { MarketsLoadingState } from "./markets-loading-state";
 import { QuoteEligibility } from "./quote-eligibility";
+import { RegisteredMarkets } from "./registered-markets";
 import type { DashboardExperience } from "./dashboard-shell";
 import styles from "./dashboard.module.css";
 
@@ -151,7 +152,11 @@ function CaseStrip({
   ].filter((item) => item !== null);
 
   return (
-    <section className={styles.registryCaseStrip} aria-label="Lifecycle scenarios">
+    <section
+      className={styles.registryCaseStrip}
+      aria-label="Lifecycle scenarios"
+      data-tour="priority-case"
+    >
       {cases.map((item) => (
         <Link href={routeFor(experience, item.slug)} key={item.slug}>
           <span className={styles[`caseTone-${item.tone}`]}>{item.label}</span>
@@ -175,10 +180,10 @@ function LiveCatalogTable({
       <div className={styles.registryTableHeader} role="row">
         <span role="columnheader">Instrument</span>
         <span role="columnheader">Market price</span>
-        <span role="columnheader">Issuer mark</span>
-        <span role="columnheader">Basis vs mark</span>
-        <span role="columnheader">Lifecycle</span>
-        <span role="columnheader">Protection</span>
+        <span role="columnheader">Issuer value</span>
+        <span role="columnheader">Difference</span>
+        <span role="columnheader">Stock status</span>
+        <span role="columnheader">Continuity</span>
         <span aria-hidden="true" />
       </div>
       {assets.map((asset) => (
@@ -266,10 +271,10 @@ function RegistryOverview({
     <>
       <section className={styles.registryIntro}>
         <div>
-          <h1>Market lifecycle registry</h1>
+          <h1>Markets</h1>
           <p>
-            Continuity watches the complete live PreStocks catalog and keeps former
-            instruments in a separate lifecycle archive.
+            Follow current stock tokens, protected launches, and past lifecycle
+            changes in one place.
           </p>
         </div>
         <div className={styles.registryScanState}>
@@ -279,10 +284,10 @@ function RegistryOverview({
       </section>
 
       <section className={styles.registrySummary} aria-label="Registry summary">
-        <div><strong>{registry.summary.monitored}</strong><span>live instruments</span></div>
-        <div><strong>{registry.summary.current}</strong><span>currently unchanged</span></div>
-        <div><strong>{registry.summary.actionRequired}</strong><span>open transition</span></div>
-        <div><strong>{registry.summary.expiredArchive + registry.summary.historicalWatchlist}</strong><span>archive records</span></div>
+        <div><strong>{registry.summary.monitored}</strong><span>stock tokens</span></div>
+        <div><strong>{registry.summary.current}</strong><span>no change</span></div>
+        <div><strong>{registry.summary.actionRequired}</strong><span>needs review</span></div>
+        <div><strong>{registry.summary.expiredArchive + registry.summary.historicalWatchlist}</strong><span>past records</span></div>
       </section>
 
       <CaseStrip experience={experience} registry={registry} />
@@ -290,8 +295,8 @@ function RegistryOverview({
       <section className={styles.registrySection}>
         <div className={styles.registryToolbar}>
           <div>
-            <h2>Coverage</h2>
-            <p>The public registry scans automatically. Wallet connection is not required.</p>
+            <h2>Stock coverage</h2>
+            <p>Continuity checks these stock tokens automatically. No wallet is required.</p>
           </div>
           <div className={styles.registryFilters} aria-label="Filter markets">
             {(["all", "attention", "historical"] as const).map((value) => (
@@ -310,10 +315,12 @@ function RegistryOverview({
 
         {showCurrent ? <LiveCatalogTable assets={currentAssets} experience={experience} /> : null}
 
+        {experience === "mainnet" && filter === "all" ? <RegisteredMarkets compact /> : null}
+
         {filter !== "all" || archivedAssets.length === 0 ? null : (
           <div className={styles.archiveHeading}>
-            <h2>Lifecycle archive</h2>
-            <p>Verified past events and former catalog instruments kept for review.</p>
+            <h2>Past lifecycle records</h2>
+            <p>Expired and removed stock tokens retained for review.</p>
           </div>
         )}
         {filter === "historical" || filter === "attention" || filter === "all" ? (
@@ -383,7 +390,7 @@ function AssetDetail({
           </h2>
           <p>
             {asset.lifecycle.state === "ACTION_REQUIRED"
-              ? "Confirm the verified successor and simulate the replacement quote rail."
+              ? "Confirm the verified successor and test the replacement market."
               : asset.lifecycle.state === "CURRENT"
                 ? "Continuity will surface a change when an approved source publishes one."
                 : "Do not create a route until exact source-backed terms exist."}
@@ -412,15 +419,15 @@ function AssetDetail({
         <section className={styles.launchAvailability}>
           <div>
             <span>Stock-quoted launch</span>
-            <strong>{isSpaceX ? "Flagship candidate available" : "Quote eligibility not reviewed"}</strong>
+            <strong>{isSpaceX ? "Protected CONT market live" : "Quote eligibility not reviewed"}</strong>
             <p>
               {isSpaceX
-                ? "The retiring SPACEX token is never used for the new market. Continuity uses the verified SPCXx successor in its first-party CONT launch draft."
+                ? "The retiring SPACEX token was not used. Continuity launched CONT against the verified SPCXx successor and now monitors that market."
                 : "This instrument is monitored for lifecycle changes, but Continuity has not yet verified its Meteora DBC badge, token compatibility, or launch policy. Monitoring does not imply launch support."}
             </p>
           </div>
           {isSpaceX ? (
-            <Link href={`${root}/launch`}>Review CONT / SPCXx launch</Link>
+            <Link href={`${root}/launch`}>Open CONT / SPCXx market</Link>
           ) : null}
           {experience === "mainnet" ? <QuoteEligibility mint={asset.mint} /> : null}
         </section>

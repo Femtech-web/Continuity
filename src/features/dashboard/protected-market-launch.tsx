@@ -1,10 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { ProductIcon } from "@/components/product-icon";
 import { useWalletAccess } from "@/features/wallet/wallet-access";
+import type { ProtectedMarketSummary } from "@/persistence/market-monitoring-store";
 import { LaunchApproval } from "./launch-approval";
+import {
+  restoreLaunchProgress,
+  type LaunchStep,
+  type RestoredLaunchPhase,
+} from "./launch-progress";
 import { LaunchPlanReview } from "./launch-plan-review";
 import { LaunchReview } from "./launch-review";
 import { LiveDbcAttestation } from "./live-dbc-attestation";
@@ -12,7 +18,6 @@ import type { DashboardExperience } from "./dashboard-shell";
 import styles from "./dashboard.module.css";
 
 type LaunchMode = "custom" | "reference";
-type LaunchStep = 0 | 1 | 2 | 3 | 4;
 
 interface ProtectedMarketLaunchProps {
   readonly experience: DashboardExperience;
@@ -49,45 +54,76 @@ interface OperatorDraft {
 
 const steps = [
   {
-    label: "Agent and token",
-    summary: "Choose the agent and define what it will launch.",
+    label: "Agent & token",
+    summary: "Choose the agent this market belongs to and name its token.",
   },
   {
     label: "Stock quote",
-    summary: "Use one exact stock-token mint that passed lifecycle review.",
+    summary: "Choose the stock token people will use to buy and sell the agent token.",
   },
   {
-    label: "Market design",
-    summary: "Review the curve, fees, graduation and liquidity policy.",
+    label: "Market setup",
+    summary: "Review pricing, fees, liquidity, and what happens as the market grows.",
   },
   {
-    label: "Preflight",
-    summary: "Build and simulate the exact Solana transaction.",
+    label: "Safety check",
+    summary: "Check wallet balances and simulate the exact Solana launch.",
   },
   {
-    label: "Approval",
-    summary: "The operator wallet makes the final launch decision.",
+    label: "Approve",
+    summary: "Review the final market and approve it in your wallet.",
   },
 ] as const;
 
 const stockQuotes = [
   { label: "SPCXx", status: "Launch ready", value: "spcxx" },
-  { label: "Anduril", status: "Verification required", value: "anduril" },
-  { label: "Anthropic", status: "Verification required", value: "anthropic" },
-  { label: "Figure AI", status: "Verification required", value: "figureai" },
-  { label: "Kalshi", status: "Verification required", value: "kalshi" },
-  { label: "Neuralink", status: "Verification required", value: "neuralink" },
-  { label: "OpenAI", status: "Verification required", value: "openai" },
-  { label: "Polymarket", status: "Verification required", value: "polymarket" },
+  { label: "Anduril", status: "Meteora support pending", value: "anduril" },
+  { label: "Anthropic", status: "Meteora support pending", value: "anthropic" },
+  { label: "Figure AI", status: "Meteora support pending", value: "figureai" },
+  { label: "Kalshi", status: "Meteora support pending", value: "kalshi" },
+  { label: "Neuralink", status: "Meteora support pending", value: "neuralink" },
+  { label: "OpenAI", status: "Meteora support pending", value: "openai" },
+  { label: "Polymarket", status: "Meteora support pending", value: "polymarket" },
 ] as const;
 
 function shortAddress(value: string) {
   return `${value.slice(0, 6)}…${value.slice(-5)}`;
 }
 
+function jupiterTradeUrl(baseMint: string, quoteMint: string): string {
+  const parameters = new URLSearchParams({ buy: baseMint, sell: quoteMint });
+  return `https://jup.ag/?${parameters.toString()}`;
+}
+
+function FieldHelp({
+  children,
+  label,
+}: Readonly<{
+  children: string;
+  label: string;
+}>) {
+  const descriptionId = useId();
+  return (
+    <span className={styles.fieldHelp}>
+      <button
+        aria-describedby={descriptionId}
+        aria-label={`About ${label}`}
+        type="button"
+      >
+        ?
+      </button>
+      <span id={descriptionId} role="tooltip">
+        {children}
+      </span>
+    </span>
+  );
+}
+
 export function ProtectedMarketLaunch({ experience }: ProtectedMarketLaunchProps) {
   const wallet = useWalletAccess();
-  const [mode, setMode] = useState<LaunchMode>("reference");
+  const [mode, setMode] = useState<LaunchMode>(
+    experience === "mainnet" ? "custom" : "reference",
+  );
   const [step, setStep] = useState<LaunchStep>(0);
   const [tokenName, setTokenName] = useState("");
   const [tokenSymbol, setTokenSymbol] = useState("");
@@ -105,6 +141,9 @@ export function ProtectedMarketLaunch({ experience }: ProtectedMarketLaunchProps
   const [workflowMessage, setWorkflowMessage] = useState<string | null>(null);
   const [draftId, setDraftId] = useState<string | null>(null);
   const [preflightPassed, setPreflightPassed] = useState(false);
+  const [referencePhase, setReferencePhase] = useState<RestoredLaunchPhase>("draft");
+  const [referenceHydrated, setReferenceHydrated] = useState(false);
+  const [confirmedMarket, setConfirmedMarket] = useState<ProtectedMarketSummary | null>(null);
 
   const selectedStock = useMemo(
     () => stockQuotes.find((candidate) => candidate.value === stockQuote) ?? stockQuotes[0],
@@ -163,9 +202,78 @@ export function ProtectedMarketLaunch({ experience }: ProtectedMarketLaunchProps
     return () => controller.abort();
   }, [mode, wallet.isAuthenticated]);
 
+  useEffect(() => {
+    if (experience !== "mainnet" || mode !== "reference" || !wallet.isAuthenticated) {
+      return;
+    }
+    const controller = new AbortController();
+    async function restoreReferenceLaunch() {
+      try {
+        const [draftResponse, marketResponse] = await Promise.all([
+          fetch("/api/v1/protected-market-drafts", {
+            cache: "no-store",
+            signal: controller.signal,
+          }),
+          fetch("/api/v1/protected-markets", {
+            cache: "no-store",
+            signal: controller.signal,
+          }),
+        ]);
+        const draftPayload = (await draftResponse.json()) as {
+          readonly drafts?: readonly OperatorDraft[];
+        };
+        const marketPayload = (await marketResponse.json()) as {
+          readonly markets?: readonly ProtectedMarketSummary[];
+        };
+        if (!draftResponse.ok || !marketResponse.ok) {
+          throw new Error("The saved launch state could not be restored.");
+        }
+        const referenceDraft = draftPayload.drafts?.find(
+          (draft) => draft.referenceKey === "CONT_SPCXX_V1",
+        );
+        if (!referenceDraft) {
+          setReferencePhase("draft");
+          setConfirmedMarket(null);
+          setStep(0);
+          return;
+        }
+        const market = marketPayload.markets?.find(
+          (candidate) => candidate.draftId === referenceDraft.id,
+        ) ?? null;
+        const progress = restoreLaunchProgress({
+          draftId: referenceDraft.id,
+          draftStatus: referenceDraft.status,
+          market,
+        });
+        setDraftId(referenceDraft.id);
+        setConfirmedMarket(market);
+        setReferencePhase(progress.phase);
+        setPreflightPassed(progress.preflightPassed);
+        setStep(progress.step);
+        if (progress.phase === "preflight-required") {
+          setWorkflowMessage("Draft restored. Run a fresh preflight before wallet approval.");
+        } else if (progress.phase === "reconciling") {
+          setWorkflowMessage("The launch was submitted. Continuity is reconciling its onchain state.");
+        } else {
+          setWorkflowMessage(null);
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setWorkflowMessage(
+            error instanceof Error ? error.message : "The saved launch state could not be restored.",
+          );
+        }
+      } finally {
+        if (!controller.signal.aborted) setReferenceHydrated(true);
+      }
+    }
+    void restoreReferenceLaunch();
+    return () => controller.abort();
+  }, [experience, mode, wallet.isAuthenticated]);
+
   function switchMode(nextMode: LaunchMode) {
     setMode(nextMode);
-    setStep(0);
+    setStep(nextMode === "reference" && referencePhase !== "draft" ? 4 : 0);
     setPreflightPassed(false);
     setWorkflowMessage(null);
   }
@@ -195,7 +303,7 @@ export function ProtectedMarketLaunch({ experience }: ProtectedMarketLaunchProps
       method: "POST",
     });
     const payload = (await response.json()) as {
-      readonly draft?: { readonly id: string };
+      readonly draft?: { readonly id: string; readonly status: string };
       readonly error?: { readonly message?: string };
     };
     if (!response.ok || !payload.draft) {
@@ -205,6 +313,21 @@ export function ProtectedMarketLaunch({ experience }: ProtectedMarketLaunchProps
     }
     setDraftId(payload.draft.id);
     return payload.draft.id;
+  }
+
+  async function refreshConfirmedMarket(marketId: string | null) {
+    const response = await fetch("/api/v1/protected-markets", { cache: "no-store" });
+    const payload = (await response.json()) as {
+      readonly markets?: readonly ProtectedMarketSummary[];
+    };
+    if (!response.ok) return;
+    const market = payload.markets?.find(
+      (candidate) => candidate.id === marketId || candidate.draftId === draftId,
+    ) ?? null;
+    if (!market) return;
+    setConfirmedMarket(market);
+    setReferencePhase("launched");
+    setPreflightPassed(false);
   }
 
   async function createAgent() {
@@ -325,39 +448,78 @@ export function ProtectedMarketLaunch({ experience }: ProtectedMarketLaunchProps
           ? draftId !== null
         : step === 3
           ? preflightPassed
-          : false);
+      : false);
+
+  if (
+    experience === "mainnet" &&
+    mode === "reference" &&
+    wallet.isAuthenticated &&
+    !referenceHydrated
+  ) {
+    return (
+      <section className={styles.protectedLaunch} aria-label="Restoring protected market">
+        <div className={styles.launchRestoreState} role="status">
+          <span aria-hidden="true" />
+          <div>
+            <strong>Restoring your launch</strong>
+            <p>Checking the saved draft and registered Meteora market.</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className={styles.protectedLaunch} aria-label="Protected market launch">
-      <div className={styles.launchModeHeader}>
-        <div>
-          <span>Protected market launch</span>
-          <h2>From an agent idea to a monitored stock-quoted market.</h2>
-          <p>
-            Any connected wallet may start a launch. Continuity verifies that the
-            wallet controls the chosen agent and that the exact stock quote is safe
-            before a transaction can reach approval.
-          </p>
+      {mode === "reference" && confirmedMarket ? (
+        <div className={styles.launchedMarketState}>
+          <div className={styles.launchedMarketHero}>
+            <span className={styles.launchedStatus}><ProductIcon name="check" /> Live and protected</span>
+            <h3>CONT / SPCXx is now a real Meteora market.</h3>
+            <p>
+              The launch is finalized on Solana. Continuity has registered the exact
+              pool and will keep checking its stock quote and DBC state.
+            </p>
+            <div className={styles.launchedActions}>
+              <a
+                className={styles.primaryAction}
+                href={jupiterTradeUrl(confirmedMarket.baseMint, confirmedMarket.quoteMint)}
+                rel="noreferrer"
+                target="_blank"
+              >
+                Trade on Jupiter <ProductIcon name="arrow-right" />
+              </a>
+              <Link className={styles.primaryAction} href="/app/markets#protected-markets">
+                Open protected markets <ProductIcon name="arrow-right" />
+              </Link>
+              <a
+                className={styles.secondaryAction}
+                href={`https://solscan.io/account/${confirmedMarket.virtualPoolAddress}`}
+                rel="noreferrer"
+                target="_blank"
+              >
+                View pool
+              </a>
+            </div>
+          </div>
+          <dl className={styles.launchedMarketFacts}>
+            <div><dt>Base token</dt><dd><strong>CONT</strong><code>{shortAddress(confirmedMarket.baseMint)}</code></dd></div>
+            <div><dt>Stock quote</dt><dd><strong>SPCXx</strong><code>{shortAddress(confirmedMarket.quoteMint)}</code></dd></div>
+            <div><dt>Protection</dt><dd><strong>{confirmedMarket.status === "ACTIVE" ? "Monitoring active" : confirmedMarket.status}</strong><code>{confirmedMarket.latestObservation ? "Latest scan recorded" : "First scan pending"}</code></dd></div>
+            <div><dt>Meteora pool</dt><dd><strong>{shortAddress(confirmedMarket.virtualPoolAddress)}</strong><code>DBC virtual pool</code></dd></div>
+          </dl>
+          <div className={styles.launchedMarketNext}>
+            <div>
+              <strong>Ready to launch another market?</strong>
+              <p>Create a new agent token and pair it with a verified stock quote.</p>
+            </div>
+            <button onClick={() => switchMode("custom")} type="button">
+              Create protected market <ProductIcon name="arrow-right" />
+            </button>
+          </div>
         </div>
-        <div className={styles.launchModeSwitch} aria-label="Launch type">
-          <button
-            aria-pressed={mode === "reference"}
-            className={mode === "reference" ? styles.launchModeActive : undefined}
-            onClick={() => switchMode("reference")}
-            type="button"
-          >
-            CONT reference
-          </button>
-          <button
-            aria-pressed={mode === "custom"}
-            className={mode === "custom" ? styles.launchModeActive : undefined}
-            onClick={() => switchMode("custom")}
-            type="button"
-          >
-            Create protected market
-          </button>
-        </div>
-      </div>
+      ) : (
+        <>
 
       <nav className={styles.launchStepper} aria-label="Launch steps">
         {steps.map((item, index) => {
@@ -386,7 +548,7 @@ export function ProtectedMarketLaunch({ experience }: ProtectedMarketLaunchProps
             <p>{steps[step].summary}</p>
           </div>
           <span className={styles.launchDraftState}>
-            {mode === "reference" ? "Reference candidate" : "New operator draft"}
+            {mode === "reference" ? "Replay example" : "New market draft"}
           </span>
         </div>
 
@@ -443,8 +605,8 @@ export function ProtectedMarketLaunch({ experience }: ProtectedMarketLaunchProps
                     {wallet.address ? "Wallet connected" : "Connect a wallet to begin"}
                   </strong>
                   <p>
-                    Your wallet owns the draft, pays the Solana launch cost and gives
-                    the final signature. Connecting does not authorize a launch.
+                    Your wallet saves the draft, pays the network cost, and approves
+                    the final launch.
                   </p>
                   {wallet.address ? (
                     <div className={styles.operatorIdentity}>
@@ -485,7 +647,13 @@ export function ProtectedMarketLaunch({ experience }: ProtectedMarketLaunchProps
                     </div>
                   ) : null}
                   <div className={styles.agentChoice}>
-                    <label htmlFor="protected-agent">ClawPump agent</label>
+                    <div className={styles.fieldLabelRow}>
+                      <label htmlFor="protected-agent">ClawPump agent</label>
+                      <FieldHelp label="ClawPump agent">
+                        This agent owns the market relationship and receives its configured
+                        partner role. Your connected wallet still controls final approval.
+                      </FieldHelp>
+                    </div>
                     <select
                       disabled={!wallet.isAuthenticated || agents.length === 0}
                       id="protected-agent"
@@ -503,8 +671,7 @@ export function ProtectedMarketLaunch({ experience }: ProtectedMarketLaunchProps
                       ))}
                     </select>
                     <p>
-                      Agents created here receive ClawPump&apos;s always-on skills and
-                      remain linked to this verified operator wallet in Continuity.
+                      Select an agent you control or create one without leaving Continuity.
                     </p>
                     {wallet.isAuthenticated ? (
                       <button
@@ -638,7 +805,13 @@ export function ProtectedMarketLaunch({ experience }: ProtectedMarketLaunchProps
               </div>
             ) : (
               <div className={styles.quotePicker}>
-                <label htmlFor="stock-quote">Stock quote asset</label>
+                <div className={styles.fieldLabelRow}>
+                  <label htmlFor="stock-quote">Stock quote asset</label>
+                  <FieldHelp label="stock quote asset">
+                    The existing stock token people use to price, buy, and sell the new
+                    agent token. Only assets that pass every Continuity check can launch.
+                  </FieldHelp>
+                </div>
                 <select
                   id="stock-quote"
                   onChange={(event) => {
@@ -656,14 +829,19 @@ export function ProtectedMarketLaunch({ experience }: ProtectedMarketLaunchProps
                 <div className={selectedQuoteReady ? styles.quoteReady : styles.quoteBlocked}>
                   <strong>
                     {selectedQuoteReady
-                      ? "This exact quote is ready for launch review."
-                      : "This instrument is monitored but not launch-enabled yet."}
+                      ? "SPCXx is ready to use."
+                      : "This stock token is not ready for launch yet."}
                   </strong>
                   <p>
                     {selectedQuoteReady
-                      ? "SPCXx has the required identity, lifecycle, transfer and Meteora checks."
-                      : "Continuity will not infer eligibility from a ticker. Its exact mint still needs pricing, transfer and Meteora checks."}
+                      ? "Its identity, lifecycle, transfer rules, pricing, and Meteora support have been verified."
+                      : "Its live audit is missing the Meteora quote badge and compatible transfer-fee support. Continuity will not send a launch that the current DBC path cannot safely support."}
                   </p>
+                  {selectedQuoteReady ? (
+                    <Link href={`/${experience === "demo" ? "demo" : "app"}/markets/spacex/evidence`}>
+                      View stock evidence <ProductIcon name="arrow-right" />
+                    </Link>
+                  ) : null}
                 </div>
               </div>
             )}
@@ -674,34 +852,78 @@ export function ProtectedMarketLaunch({ experience }: ProtectedMarketLaunchProps
         {step === 2 ? (
           <div className={styles.launchStepContent}>
             <div className={styles.marketDesignSummary}>
-              <article><span>Opening fee</span><strong>1.00% → 0.25%</strong><small>Falls over 15 minutes</small></article>
-              <article><span>Graduation</span><strong>$1,000 of SPCXx</strong><small>Recalculated from live references</small></article>
-              <article><span>Price protection</span><strong>Dynamic fees</strong><small>Responds to rapid price movement</small></article>
-              <article><span>Liquidity</span><strong>Permanently locked</strong><small>50% agent · 50% operator</small></article>
-              <article><span>After graduation</span><strong>Meteora DAMM v2</strong><small>0.30% pool fee</small></article>
+              <article>
+                <div className={styles.marketSettingLabel}>
+                  <span>Opening fee</span>
+                  <FieldHelp label="opening fee">
+                    The fee charged on early trades. It starts higher during price
+                    discovery and falls automatically over 15 minutes.
+                  </FieldHelp>
+                </div>
+                <strong>1.00% → 0.25%</strong><small>Falls over 15 minutes</small>
+              </article>
+              <article>
+                <div className={styles.marketSettingLabel}>
+                  <span>Graduation</span>
+                  <FieldHelp label="graduation">
+                    The amount the launch curve must collect before liquidity moves into
+                    the long-running Meteora pool.
+                  </FieldHelp>
+                </div>
+                <strong>$1,000 of SPCXx</strong><small>Recalculated from live references</small>
+              </article>
+              <article>
+                <div className={styles.marketSettingLabel}>
+                  <span>Price protection</span>
+                  <FieldHelp label="price protection">
+                    Dynamic fees temporarily make rapid, volatile trading more expensive
+                    and settle as the market stabilizes.
+                  </FieldHelp>
+                </div>
+                <strong>Dynamic fees</strong><small>Responds to rapid price movement</small>
+              </article>
+              <article>
+                <div className={styles.marketSettingLabel}>
+                  <span>Liquidity</span>
+                  <FieldHelp label="liquidity lock">
+                    Migrated liquidity stays in the market permanently. The agent and
+                    operator receive the configured fee shares instead of withdrawing it.
+                  </FieldHelp>
+                </div>
+                <strong>Permanently locked</strong><small>50% agent · 50% operator</small>
+              </article>
+              <article>
+                <div className={styles.marketSettingLabel}>
+                  <span>After graduation</span>
+                  <FieldHelp label="market after graduation">
+                    When the launch curve finishes, trading continues in a Meteora DAMM v2
+                    liquidity pool with the displayed pool fee.
+                  </FieldHelp>
+                </div>
+                <strong>Meteora DAMM v2</strong><small>0.30% pool fee</small>
+              </article>
             </div>
             <div className={styles.safetyBoundary}>
-              <strong>Safety rules are never optional.</strong>
+              <strong>Every launch uses the same safety checks.</strong>
               <p>
-                Exact mint identity, issuer-backed lifecycle evidence, reference
-                quality, transaction simulation and the final wallet signature stay
-                mandatory for every protected market.
+                Continuity verifies the stock token, checks its source and price,
+                simulates the transaction, and always leaves final approval to your wallet.
               </p>
             </div>
-            <details className={styles.technicalDisclosure} open={mode === "reference"}>
+            <details className={styles.technicalDisclosure}>
               <summary>
-                <span><strong>Reviewed market configuration</strong><small>Curve calibration and reproducible policy hash</small></span>
-                <span className={styles.disclosureAction}>View details</span>
+                <span><strong>Technical market settings</strong><small>Curve, fee, and policy details</small></span>
+                <span className={styles.disclosureAction}>Inspect</span>
               </summary>
               <div className={styles.technicalDisclosureBody}>
                 {mode === "reference" ? (
                   <LaunchReview experience={experience} />
                 ) : (
                   <div className={styles.customAdapterNotice}>
-                    <strong>Reference design selected</strong>
+                    <strong>Protected market preset</strong>
                     <p>
-                      Custom market values will be compiled only after the agent and
-                      quote asset have passed ownership and eligibility checks.
+                      Continuity applies the reviewed stock-market settings after the
+                      agent and stock token pass their checks.
                     </p>
                   </div>
                 )}
@@ -738,9 +960,9 @@ export function ProtectedMarketLaunch({ experience }: ProtectedMarketLaunchProps
                 />
               ) : (
                 <div className={styles.preflightGate}>
-                  <span>Draft validation</span>
-                  <strong>Save the protected-market draft first.</strong>
-                  <p>Return to the quote step and continue to create an operator-owned draft.</p>
+                  <span>Draft needed</span>
+                  <strong>Save this market before running the safety check.</strong>
+                  <p>Return to the stock quote step and continue to save the draft.</p>
                   <button className={styles.secondaryAction} onClick={() => setStep(1)} type="button">
                     Review stock quote
                   </button>
@@ -760,7 +982,7 @@ export function ProtectedMarketLaunch({ experience }: ProtectedMarketLaunchProps
                     ? "CONT / SPCXx"
                     : `${tokenSymbol || "New token"} / ${selectedStock.label}`}
                 </strong>
-                <small>Meteora DBC · Solana mainnet</small>
+                <small>Meteora · Solana mainnet</small>
               </div>
               <div>
                 <span>Operator</span>
@@ -770,7 +992,7 @@ export function ProtectedMarketLaunch({ experience }: ProtectedMarketLaunchProps
               <div>
                 <span>Current state</span>
                 <strong>{preflightPassed ? "Ready for wallet approval" : "Approval unavailable"}</strong>
-                <small>{preflightPassed ? "Stored preflight passed" : "A passing live preflight is still required"}</small>
+                <small>{preflightPassed ? "Safety check passed" : "Run the safety check first"}</small>
               </div>
             </div>
             {experience === "mainnet" && draftId && preflightPassed ? (
@@ -781,14 +1003,15 @@ export function ProtectedMarketLaunch({ experience }: ProtectedMarketLaunchProps
                     ? "CONT / SPCXx"
                     : `${tokenSymbol || "New token"} / ${selectedStock.label}`
                 }
+                onConfirmed={({ marketId }) => void refreshConfirmedMarket(marketId)}
               />
             ) : (
               <div className={styles.approvalBoundary}>
                 <div>
                   <strong>Nothing launches automatically.</strong>
                   <p>
-                    A verified operator, saved draft and passing live preflight are
-                    required before Continuity asks a wallet to sign.
+                    Connect the wallet that owns this draft and pass the safety check
+                    before Continuity asks for approval.
                   </p>
                 </div>
                 <button disabled type="button">Approve and launch</button>
@@ -809,13 +1032,13 @@ export function ProtectedMarketLaunch({ experience }: ProtectedMarketLaunchProps
               <small>Choose a launch-ready quote asset.</small>
             ) : null}
             {mode === "custom" && !canContinue && step === 3 ? (
-              <small>Run a live preflight and resolve every required check.</small>
+              <small>Run the safety check and resolve every required item.</small>
             ) : null}
             {mode === "reference" && experience === "mainnet" && !canContinue && step === 0 ? (
               <small>Connect and verify the configured CONT operator wallet.</small>
             ) : null}
             {mode === "reference" && experience === "mainnet" && !canContinue && step === 3 ? (
-              <small>Run a passing live preflight before approval.</small>
+              <small>Pass the safety check before approval.</small>
             ) : null}
             {step < 4 ? (
               <button
@@ -830,6 +1053,8 @@ export function ProtectedMarketLaunch({ experience }: ProtectedMarketLaunchProps
           </div>
         </footer>
       </div>
+        </>
+      )}
     </section>
   );
 }

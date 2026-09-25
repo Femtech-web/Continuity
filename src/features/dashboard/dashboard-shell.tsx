@@ -2,7 +2,6 @@ import Link from "next/link";
 import { ContinuityMark } from "@/components/continuity-mark";
 import {
   ProductIcon,
-  type ProductIconName,
 } from "@/components/product-icon";
 import { abbreviateHash } from "@/domain/continuity/canonical-json";
 import {
@@ -11,7 +10,6 @@ import {
 } from "@/domain/continuity/quote-rail-receipt";
 import { WalletAccessButton } from "@/features/wallet/wallet-access";
 import { LiveAgentRuns } from "./live-agent-runs";
-import { RegisteredMarkets } from "./registered-markets";
 import { MarketsRegistry } from "./markets-registry";
 import { ProtectedMarketLaunch } from "./protected-market-launch";
 import { ProductTour } from "./product-tour";
@@ -23,7 +21,6 @@ export type DashboardView =
   | "assetEvidence"
   | "market"
   | "markets"
-  | "overview"
   | "receipt";
 
 interface DashboardShellProps {
@@ -38,93 +35,10 @@ interface NavigationItem {
 }
 
 const navigationItems: readonly NavigationItem[] = [
-  { label: "Overview", view: "overview" },
   { label: "Markets", view: "markets" },
   { label: "Launch", view: "market" },
   { label: "Activity", view: "receipt" },
 ];
-
-const demoMarketMetrics = [
-  {
-    label: "Live instruments",
-    value: "8",
-    detail: "Complete current PreStocks catalog",
-  },
-  {
-    label: "Open transitions",
-    value: "1",
-    detail: "SPACEX → SPCXx",
-  },
-  {
-    label: "Protected markets",
-    value: "1",
-    detail: "CONT / SPACEX needs rollover",
-  },
-] as const satisfies readonly {
-  label: string;
-  value: string;
-  detail: string;
-}[];
-
-const decisionReasons = [
-  {
-    icon: "check",
-    label: "Issuer evidence",
-    detail: "The successor instrument has been identified",
-    state: "Pass",
-    tone: "pass",
-  },
-  {
-    icon: "warning",
-    label: "Current market",
-    detail: "Its quote asset is the retiring SPACEX token",
-    state: "Fail",
-    tone: "fail",
-  },
-  {
-    icon: "clock",
-    label: "Next action",
-    detail: "Wait until the successor market is approved",
-    state: "Held",
-    tone: "watch",
-  },
-] as const satisfies readonly {
-  icon: ProductIconName;
-  label: string;
-  detail: string;
-  state: string;
-  tone: "pass" | "fail" | "watch";
-}[];
-
-const liveLifecycleReasons = [
-  {
-    icon: "check",
-    label: "Source transition",
-    detail: "PreStocks identifies SPCXx as the successor",
-    state: "Pass",
-    tone: "pass",
-  },
-  {
-    icon: "warning",
-    label: "SPACEX instrument",
-    detail: "The current token retires on 12 Mar 2027",
-    state: "Action",
-    tone: "fail",
-  },
-  {
-    icon: "clock",
-    label: "CONT launch draft",
-    detail: "Uses SPCXx and remains unsigned",
-    state: "Review",
-    tone: "watch",
-  },
-] as const satisfies readonly {
-  icon: ProductIconName;
-  label: string;
-  detail: string;
-  state: string;
-  tone: "pass" | "fail" | "watch";
-}[];
 
 function getRoute(experience: DashboardExperience, view: DashboardView) {
   const root = experience === "demo" ? "/demo" : "/app";
@@ -132,7 +46,7 @@ function getRoute(experience: DashboardExperience, view: DashboardView) {
   if (view === "asset") return `${root}/markets`;
   if (view === "assetEvidence") return `${root}/markets/spacex/evidence`;
   if (view === "receipt") return `${root}/activity`;
-  return view === "overview" ? root : `${root}/${view}`;
+  return `${root}/${view}`;
 }
 
 function isNavigationActive(item: NavigationItem, view: DashboardView) {
@@ -150,30 +64,23 @@ function ViewHeader({
   readonly view: Exclude<DashboardView, "asset" | "assetEvidence" | "markets">;
 }) {
   const content = {
-    overview: {
-      title: "Market protection",
-      description:
-        "Verify a stock quote before launch, then keep checking it for lifecycle changes for as long as the agent market remains active.",
-      action: "Open market registry",
-      target: "markets" as const,
-    },
     market: {
-      title: experience === "mainnet" ? "Continuity launch candidate" : "Rollover replay",
+      title: experience === "mainnet" ? "Create a protected market" : "Rollover replay",
       description:
         experience === "mainnet"
-          ? "Create the new CONT token and its first stock-quoted market only after the existing SPCXx quote instrument and every launch prerequisite pass review."
+          ? "Launch an agent token against a verified stock token, then keep the market under Sentinel protection."
           : "See why the replayed CONT/SPACEX market is unsafe and how a CONT/SPCXx successor would be prepared.",
-      action: "Review source evidence",
-      target: "assetEvidence" as const,
+      action: experience === "mainnet" ? "View protected markets" : "Review source evidence",
+      target: experience === "mainnet" ? "markets" as const : "assetEvidence" as const,
     },
     receipt: {
       title: experience === "mainnet" ? "Sentinel activity" : "Decision activity",
       description:
         experience === "mainnet"
-          ? "See how agents access Continuity and inspect persisted decisions in the append-only run chain."
+          ? "See the daily automatic checks, their results, and any checks requested by people or agents."
           : "Export portable proof of the evidence, attestation, refusal, and prepared successor market.",
-      action: "Back to overview",
-      target: "overview" as const,
+      action: "Open markets",
+      target: "markets" as const,
     },
   }[view];
 
@@ -187,102 +94,6 @@ function ViewHeader({
         {content.action} <ProductIcon name="arrow-right" />
       </Link>
     </section>
-  );
-}
-
-function MarketCase({ experience }: { readonly experience: DashboardExperience }) {
-  const live = experience === "mainnet";
-  return (
-    <article className={styles.priorityCase}>
-      <div className={styles.caseTopline}>
-        <div>
-          <span>{live ? "Open lifecycle transition" : "Replayed affected market"}</span>
-          <strong>{live ? "SPACEX → SPCXx" : "CONT / SPACEX"}</strong>
-        </div>
-        <span className={styles.rolloverBadge}>
-          {live ? "Deadline open" : "Rollover required"}
-        </span>
-      </div>
-
-      <p className={styles.caseSummary}>
-        {live
-          ? "PreStocks marks the exact SPACEX mint as retiring and identifies SPCXx as its successor. This is a source event; it does not mean a CONT market already exists."
-          : "The replay applies that verified transition to a hypothetical CONT/SPACEX market and shows Sentinel refusing the obsolete quote rail."}
-      </p>
-
-      <div className={styles.instrumentPath}>
-        <div>
-          <span>{live ? "Retiring instrument" : "Replayed current market"}</span>
-          <strong>{live ? "SPACEX" : "CONT / SPACEX"}</strong>
-          <small>{live ? "Existing PreStocks token" : "Uses the retiring instrument"}</small>
-        </div>
-        <span className={styles.pathLine} aria-hidden="true">
-          <ProductIcon name="arrow-right" />
-        </span>
-        <div>
-          <span>{live ? "Verified successor" : "Prepared successor market"}</span>
-          <strong>{live ? "SPCXx" : "CONT / SPCXx"}</strong>
-          <small>{live ? "Existing PreStocks token" : "Ready for review"}</small>
-        </div>
-      </div>
-
-      <dl className={styles.caseFacts}>
-        <div><dt>Source</dt><dd>PreStocks</dd></div>
-        <div><dt>Deadline</dt><dd>12 Mar 2027</dd></div>
-        <div><dt>{live ? "Market" : "Transaction"}</dt><dd>{live ? "Not implied" : "Not submitted"}</dd></div>
-      </dl>
-
-      <div className={styles.caseFooter}>
-        <span>{live ? "Lifecycle monitoring is public and wallet-free." : "Only Continuity-managed actions are held."}</span>
-        <Link href={live ? "/app/markets/spacex" : getRoute(experience, "market")}>
-          {live ? "Open SpaceX lifecycle" : "Open rollover replay"} <ProductIcon name="arrow-right" />
-        </Link>
-      </div>
-    </article>
-  );
-}
-
-function DecisionReasonCard({
-  experience,
-  target,
-}: {
-  readonly experience: DashboardExperience;
-  readonly target: "assetEvidence" | "market";
-}) {
-  const reasons = experience === "mainnet" ? liveLifecycleReasons : decisionReasons;
-  return (
-    <article className={styles.decisionCard}>
-      <div className={styles.decisionCardHeader}>
-        <div>
-          <strong>{experience === "mainnet" ? "What Continuity knows" : "Why it stopped"}</strong>
-          <span>{experience === "mainnet" ? "Source and launch state" : "Protection checks"}</span>
-        </div>
-      </div>
-      <div className={styles.reasonList}>
-        {reasons.map((reason) => (
-          <div className={styles.reasonRow} key={reason.label}>
-            <span
-              className={`${styles.reasonIcon} ${styles[`reasonIcon-${reason.tone}`]}`}
-            >
-              <ProductIcon name={reason.icon} />
-            </span>
-            <div>
-              <strong>{reason.label}</strong>
-              <span>{reason.detail}</span>
-            </div>
-            <small>{reason.state}</small>
-          </div>
-        ))}
-      </div>
-      <Link className={styles.decisionAction} href={getRoute(experience, target)}>
-        {target === "market"
-          ? experience === "mainnet"
-            ? "Review CONT launch candidate"
-            : "Inspect rollover details"
-          : "Review source evidence"}
-        <ProductIcon name="arrow-right" />
-      </Link>
-    </article>
   );
 }
 
@@ -365,60 +176,6 @@ function DecisionLedger({ receipt }: { readonly receipt: QuoteRailReceiptBundle 
   );
 }
 
-function OverviewPage({
-  experience,
-}: {
-  readonly experience: DashboardExperience;
-}) {
-  const metrics =
-    experience === "mainnet"
-      ? [
-          {
-            label: "Live instruments",
-            value: "8",
-            detail: "Complete current PreStocks catalog",
-          },
-          {
-            label: "Open transitions",
-            value: "1",
-            detail: "SPACEX → SPCXx",
-          },
-          {
-            label: "Launch candidates",
-            value: "1",
-            detail: "CONT / SPCXx · not launched",
-          },
-        ]
-      : demoMarketMetrics;
-
-  return (
-    <>
-      <ViewHeader experience={experience} view="overview" />
-      <section className={styles.portfolioMetrics} aria-label="Monitoring summary">
-        {metrics.map((metric) => (
-          <article className={styles.metric} key={metric.label}>
-            <div>
-              <span>{metric.label}</span>
-              <strong>{metric.value}</strong>
-              <small>{metric.detail}</small>
-            </div>
-          </article>
-        ))}
-      </section>
-      <section className={styles.actionSection} data-tour="priority-case">
-        <div className={styles.sectionHeading}>
-          <h2>One market needs attention.</h2>
-          <p>Ordered by lifecycle risk, not trading opportunity</p>
-        </div>
-        <div className={styles.actionGrid}>
-          <MarketCase experience={experience} />
-          <DecisionReasonCard experience={experience} target="market" />
-        </div>
-      </section>
-    </>
-  );
-}
-
 function MarketPage({
   experience,
 }: {
@@ -444,7 +201,6 @@ function ReceiptPage({
       <>
         <ViewHeader experience={experience} view="receipt" />
         <LiveAgentRuns />
-        <RegisteredMarkets />
       </>
     );
   }
@@ -463,7 +219,7 @@ function ReceiptPage({
 export async function DashboardShell({
   experience = "demo",
   selectedAsset,
-  view = "overview",
+  view = "markets",
 }: DashboardShellProps) {
   const isDemo = experience === "demo";
   const receipt = await buildQuoteRailReplayReceipt();
@@ -520,7 +276,7 @@ export async function DashboardShell({
               </div>
               <div className={styles.tourSlot}>
                 <ProductTour
-                  autoStart={isDemo && view === "overview"}
+                  autoStart={isDemo && view === "markets"}
                   triggerLabel="Guided tour"
                 />
               </div>
@@ -537,7 +293,7 @@ export async function DashboardShell({
               {isDemo ? (
                 <><strong>Wallet-free replay.</strong> Deterministic fixture; no transaction is submitted.</>
               ) : (
-                <><strong>Mainnet workspace.</strong> Public reads and unsigned preflights are live. No transaction is sent automatically.</>
+                <><strong>Mainnet.</strong> Live reads, simulations, and wallet-approved launches. Nothing is signed automatically.</>
               )}
             </p>
             <Link href={alternateExperienceRoute}>
@@ -545,7 +301,6 @@ export async function DashboardShell({
             </Link>
           </div>
 
-          {view === "overview" ? <OverviewPage experience={experience} /> : null}
           {view === "market" ? <MarketPage experience={experience} /> : null}
           {view === "markets" ? <MarketsRegistry experience={experience} /> : null}
           {view === "asset" ? (

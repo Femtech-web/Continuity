@@ -4,7 +4,7 @@ import { ClawPumpAdapter } from "@/integrations/clawpump";
 import { IntegrationError, integrationErrorResponse } from "@/integrations/integration-error";
 import { SPCXX_MINT } from "@/integrations/meteora-dbc";
 import {
-  ensureOperatorAgentMapping,
+  ensureReferenceOperatorAgentMapping,
   getOrCreateReferenceDraft,
 } from "@/persistence/protected-market-store";
 
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       timeoutMs: environment.clawpump.timeoutMs,
     });
     const authority = await clawpump.resolveLaunchAuthority();
-    const mapping = await ensureOperatorAgentMapping({
+    const mapping = await ensureReferenceOperatorAgentMapping({
       agentName: authority.agent.name,
       clawPumpAgentId: authority.agent.id,
       clawPumpWalletAddress: authority.agent.walletAddress,

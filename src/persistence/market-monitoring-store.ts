@@ -4,6 +4,7 @@ interface ProtectedMarketRow {
   readonly base_mint: string;
   readonly config_address: string;
   readonly configuration_hash: string;
+  readonly draft_id: string;
   readonly id: string;
   readonly last_monitored_at: string | null;
   readonly launch_signature: string;
@@ -21,6 +22,7 @@ export interface ProtectedMarketRecord {
   readonly baseMint: string;
   readonly configAddress: string;
   readonly configurationHash: string;
+  readonly draftId: string;
   readonly id: string;
   readonly lastMonitoredAt: string | null;
   readonly launchSignature: string;
@@ -39,6 +41,7 @@ function toMarket(row: ProtectedMarketRow): ProtectedMarketRecord {
     baseMint: row.base_mint,
     configAddress: row.config_address,
     configurationHash: row.configuration_hash,
+    draftId: row.draft_id,
     id: row.id,
     lastMonitoredAt: row.last_monitored_at,
     launchSignature: row.launch_signature,
@@ -62,7 +65,14 @@ interface MonitoringSnapshotRow {
   readonly receipt_hash: string;
 }
 
+interface ProtectedMarketDraftIdentityRow {
+  readonly token_name: string;
+  readonly token_symbol: string;
+}
+
 export interface ProtectedMarketSummary extends ProtectedMarketRecord {
+  readonly baseName: string;
+  readonly baseSymbol: string;
   readonly latestObservation: null | {
     readonly curveProgressBps: number | null;
     readonly dbcState: string;
@@ -84,15 +94,26 @@ export async function listProtectedMarketSummaries(): Promise<
   return Object.freeze(
     await Promise.all(
       rows.map(async (row) => {
-        const snapshots = await database.request<readonly MonitoringSnapshotRow[]>(
-          "market_monitoring_snapshots",
-          {
-            query: `market_id=${postgrestEquals(row.id)}&select=curve_progress_bps,dbc_state,fee_bps,lifecycle_state,observed_at,receipt_hash&order=observed_at.desc&limit=1`,
-          },
-        );
+        const [snapshots, drafts] = await Promise.all([
+          database.request<readonly MonitoringSnapshotRow[]>(
+            "market_monitoring_snapshots",
+            {
+              query: `market_id=${postgrestEquals(row.id)}&select=curve_progress_bps,dbc_state,fee_bps,lifecycle_state,observed_at,receipt_hash&order=observed_at.desc&limit=1`,
+            },
+          ),
+          database.request<readonly ProtectedMarketDraftIdentityRow[]>(
+            "protected_market_drafts",
+            {
+              query: `id=${postgrestEquals(row.draft_id)}&select=token_name,token_symbol&limit=1`,
+            },
+          ),
+        ]);
         const latest = snapshots[0];
+        const draft = drafts[0];
         return Object.freeze({
           ...toMarket(row),
+          baseName: draft?.token_name ?? "Agent token",
+          baseSymbol: draft?.token_symbol ?? "Token",
           latestObservation: latest
             ? Object.freeze({
                 curveProgressBps: latest.curve_progress_bps,

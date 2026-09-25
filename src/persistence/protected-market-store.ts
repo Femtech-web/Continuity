@@ -1,12 +1,17 @@
 import type {
   ProtectedMarketDraft,
   ProtectedMarketDraftInput,
-} from "@/domain/continuity/protected-market-draft";
-import { IntegrationError } from "@/integrations/integration-error";
+} from "../domain/continuity/protected-market-draft.ts";
+import { IntegrationError } from "../integrations/integration-error.ts";
 import {
   getSupabaseRestClient,
   postgrestEquals,
-} from "./supabase-rest";
+} from "./supabase-rest.ts";
+
+export type ProtectedMarketDatabase = Pick<
+  ReturnType<typeof getSupabaseRestClient>,
+  "request"
+>;
 
 interface DraftRow {
   readonly config: Record<string, unknown>;
@@ -70,8 +75,7 @@ export async function ensureOperatorAgentMapping(input: {
   readonly clawPumpAgentId: string;
   readonly clawPumpWalletAddress: string;
   readonly operatorId: number;
-}) {
-  const database = getSupabaseRestClient();
+}, database: ProtectedMarketDatabase = getSupabaseRestClient()) {
   const existing = await database.request<
     readonly (AgentRow & { readonly operator_id: number })[]
   >("operator_agents", {
@@ -100,6 +104,44 @@ export async function ensureOperatorAgentMapping(input: {
   });
   const row = rows[0];
   if (!row) throw new Error("Supabase did not return the mapped agent.");
+  return toAgent(row);
+}
+
+export async function ensureReferenceOperatorAgentMapping(input: {
+  readonly agentName: string;
+  readonly clawPumpAgentId: string;
+  readonly clawPumpWalletAddress: string;
+  readonly operatorId: number;
+}, database: ProtectedMarketDatabase = getSupabaseRestClient()) {
+  const existing = await database.request<
+    readonly (AgentRow & { readonly operator_id: number })[]
+  >("operator_agents", {
+    query: `clawpump_agent_id=${postgrestEquals(input.clawPumpAgentId)}&select=id,operator_id,clawpump_agent_id,clawpump_wallet_address,agent_name&limit=1`,
+  });
+  const current = existing[0];
+  if (!current || current.operator_id === input.operatorId) {
+    return ensureOperatorAgentMapping(input, database);
+  }
+
+  const rows = await database.request<readonly AgentRow[]>(
+    "rpc/claim_reference_launch_ownership",
+    {
+      body: {
+        p_clawpump_agent_id: input.clawPumpAgentId,
+        p_reference_key: "CONT_SPCXX_V1",
+        p_target_operator_id: input.operatorId,
+      },
+      method: "POST",
+    },
+  );
+  const row = rows[0];
+  if (!row) {
+    throw new IntegrationError(
+      "UPSTREAM_UNAVAILABLE",
+      "Supabase did not return the transferred reference-agent mapping.",
+      { retryable: false, status: 503 },
+    );
+  }
   return toAgent(row);
 }
 

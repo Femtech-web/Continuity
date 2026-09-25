@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "sentinel:run": "node --env-file=.env.local --experimental-strip-types scripts/run-sentinel.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test src/domain/continuity/*.test.ts src/config/*.test.ts src/integrations/*.test.ts src/persistence/*.test.ts src/services/*.test.ts src/transactions/*.test.ts"
+    "test": "node --experimental-strip-types --test src/domain/continuity/*.test.ts src/config/*.test.ts src/features/dashboard/*.test.ts src/integrations/*.test.ts src/persistence/*.test.ts src/services/*.test.ts src/transactions/*.test.ts"
   },
   "dependencies": {
     "@fontsource-variable/instrument-sans": "5.3.0",

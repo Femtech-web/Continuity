@@ -3,6 +3,7 @@
 import { getBase58Decoder } from "@solana/kit";
 import { useConnectedWallet } from "@solana/kit-plugin-wallet/react";
 import { useClient, useSignAndSendTransaction } from "@solana/react";
+import Link from "next/link";
 import { useState } from "react";
 import {
   solanaChain,
@@ -70,10 +71,12 @@ function ConnectedLaunchApproval({
   account,
   draftId,
   marketLabel,
+  onConfirmed,
 }: Readonly<{
   account: ConnectedWalletState["account"];
   draftId: string;
   marketLabel: string;
+  onConfirmed?: (result: { readonly marketId: string | null; readonly signature: string }) => void;
 }>) {
   const signAndSendTransaction = useSignAndSendTransaction(account, solanaChain);
   const [state, setState] = useState<ApprovalState>({ status: "idle" });
@@ -90,11 +93,12 @@ function ConnectedLaunchApproval({
       );
       const payload = (await response.json()) as ConfirmationPayload;
       if (response.ok && payload.status === "CONFIRMED") {
-        setState({
+        const result = {
           marketId: payload.marketId ?? null,
           signature,
-          status: "confirmed",
-        });
+        };
+        setState({ ...result, status: "confirmed" });
+        onConfirmed?.(result);
         return;
       }
       if (response.status !== 202) {
@@ -180,9 +184,12 @@ function ConnectedLaunchApproval({
                 : "The transaction is on Solana; Continuity will register it after confirmation."}
             </p>
           </div>
-          <a href={explorerUrl(state.signature)} rel="noreferrer" target="_blank">
-            View transaction
-          </a>
+          <div className={styles.launchApprovalResultActions}>
+            <Link href="/app/markets#protected-markets">Open market monitoring</Link>
+            <a href={explorerUrl(state.signature)} rel="noreferrer" target="_blank">
+              View transaction
+            </a>
+          </div>
         </div>
       ) : (
         <>
@@ -216,7 +223,12 @@ function ConnectedLaunchApproval({
 export function LaunchApproval({
   draftId,
   marketLabel,
-}: Readonly<{ draftId: string; marketLabel: string }>) {
+  onConfirmed,
+}: Readonly<{
+  draftId: string;
+  marketLabel: string;
+  onConfirmed?: (result: { readonly marketId: string | null; readonly signature: string }) => void;
+}>) {
   const client = useClient<ContinuitySolanaClient>();
   const connected = useConnectedWallet(client);
 
@@ -237,6 +249,7 @@ export function LaunchApproval({
       account={connected.account}
       draftId={draftId}
       marketLabel={marketLabel}
+      onConfirmed={onConfirmed}
     />
   );
 }

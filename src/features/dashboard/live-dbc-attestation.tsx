@@ -32,7 +32,7 @@ const verdictCopy: Record<
   },
   QUOTE_READY: {
     label: "SPCXx is eligible",
-    detail: "The quote asset passed. No Continuity market has been launched.",
+    detail: "The quote asset passed and can proceed to a protected-market review.",
   },
 };
 

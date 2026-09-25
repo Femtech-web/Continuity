@@ -84,6 +84,20 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   });
 }
 
+export function isDynamicFeeEnabled(binStep: unknown): boolean {
+  if (typeof binStep === "number") return Number.isFinite(binStep) && binStep !== 0;
+  if (typeof binStep === "bigint") return binStep !== 0n;
+  if (
+    typeof binStep === "object" &&
+    binStep !== null &&
+    "isZero" in binStep &&
+    typeof binStep.isZero === "function"
+  ) {
+    return !binStep.isZero();
+  }
+  return false;
+}
+
 export class MeteoraDbcAdapter {
   readonly #cluster: SolanaCluster;
   readonly #configAddress: string | null;
@@ -189,7 +203,7 @@ export class MeteoraDbcAdapter {
           baseFeeMode: config.poolFees.baseFee.baseFeeMode,
           cliffFeeNumerator: config.poolFees.baseFee.cliffFeeNumerator.toString(),
           collectFeeMode: config.collectFeeMode,
-          dynamicFeeEnabled: !config.poolFees.dynamicFee.binStep.isZero(),
+          dynamicFeeEnabled: isDynamicFeeEnabled(config.poolFees.dynamicFee.binStep),
           migratedPoolFeeBps: config.migratedPoolFeeBps,
           migrationOption: config.migrationOption,
           migrationQuoteThreshold: config.migrationQuoteThreshold.toString(),

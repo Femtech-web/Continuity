@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { DashboardShell } from "@/features/dashboard/dashboard-shell";
 
 export const metadata: Metadata = {
-  title: "CONT / SPCXx launch candidate",
+  title: "Create a protected market",
   description:
-    "Review the first-party Continuity token and SPCXx-quoted Meteora DBC market before any wallet approval.",
+    "Launch an agent token against a verified stock token and keep it under Sentinel protection.",
 };
 
 export default function MainnetLaunchPage() {

@@ -164,33 +164,33 @@ export function LiveAgentRuns() {
       <section className={styles.agentChannels} data-tour="agent-access">
         <div>
           <span>ClawPump skill</span>
-          <strong>Sentinel is installable</strong>
-          <p>Any ClawPump agent can load the Continuity skill and run the same deterministic policy.</p>
+          <strong>Run checks from ClawPump</strong>
+          <p>ClawPump agents can use Sentinel to check a stock token before acting.</p>
           <code>skills/continuity-sentinel/SKILL.md</code>
         </div>
         <div>
           <span>x402 service</span>
-          <strong>Paid scans are gateway-ready</strong>
-          <p>ClawPump Cloud enforces payment before the read-only scan; payment never grants transaction authority.</p>
+          <strong>Offer paid market checks</strong>
+          <p>Agents can pay for a read-only check without receiving control of a wallet.</p>
           <code>POST /api/v1/scans/quote-rail</code>
         </div>
         <div>
           <span>MCP</span>
-          <strong>External agents can inspect and scan</strong>
-          <p>Claude, Codex, and MCP clients can query the registry, evidence, and Sentinel policy.</p>
+          <strong>Connect external agents</strong>
+          <p>Claude, Codex, and other MCP clients can inspect markets and request checks.</p>
           <code>POST /api/mcp</code>
         </div>
       </section>
       <section className={styles.agentRunSummary}>
         <div>
-          <span>Latest deterministic run</span>
+          <span>Latest check</span>
           <h2>
             {latest ? displayState(latest.document.decision.verdict) : "No live runs yet"}
           </h2>
           <p>
             {latest
-              ? `${displayState(latest.document.decision.action)} · no transaction created`
-              : "Run Sentinel to capture PreStocks, Meteora, Jupiter, and Pyth evidence."}
+              ? `${displayState(latest.document.decision.action)} · automatic checks run daily`
+              : "Continuity checks automatically each day. You can also check now."}
           </p>
         </div>
         {latest ? (
@@ -215,15 +215,15 @@ export function LiveAgentRuns() {
           onClick={() => void runScan()}
           type="button"
         >
-          {isRunning ? "Running live checks…" : "Run live scan"}
+          {isRunning ? "Checking now…" : "Check now"}
         </button>
       </section>
 
       {state.records.length > 0 ? (
         <section className={styles.ledgerSection} aria-labelledby="agent-run-history-title">
           <div className={styles.sectionHeading}>
-            <h2 id="agent-run-history-title">Agent-run evidence</h2>
-            <p>Latest first · append-only hash chain</p>
+            <h2 id="agent-run-history-title">Sentinel history</h2>
+            <p>Newest first · each result is tamper-evident</p>
           </div>
           <div className={styles.ledgerTable} role="table" aria-label="Sentinel agent runs">
             <div className={`${styles.ledgerHeader} ${styles.agentRunGrid}`} role="row">

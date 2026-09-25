@@ -30,7 +30,15 @@ function displayState(value: string): string {
   ).join(" ");
 }
 
-export function RegisteredMarkets() {
+function jupiterTradeUrl(market: ProtectedMarketSummary): string {
+  const parameters = new URLSearchParams({
+    buy: market.baseMint,
+    sell: market.quoteMint,
+  });
+  return `https://jup.ag/?${parameters.toString()}`;
+}
+
+export function RegisteredMarkets({ compact = false }: Readonly<{ compact?: boolean }>) {
   const [state, setState] = useState<MarketState>({ status: "loading" });
 
   useEffect(() => {
@@ -66,13 +74,17 @@ export function RegisteredMarkets() {
   if (state.status === "unavailable") return null;
 
   return (
-    <section className={styles.registeredMarkets} aria-labelledby="protected-markets-title">
+    <section
+      className={`${styles.registeredMarkets} ${compact ? styles.registeredMarketsCompact : ""}`}
+      aria-labelledby="protected-markets-title"
+      id="protected-markets"
+    >
       <div className={styles.sectionHeading}>
         <div>
-          <span>Post-launch protection</span>
+          <span>Sentinel protected</span>
           <h2 id="protected-markets-title">Protected markets</h2>
         </div>
-        <p>Lifecycle and liquidity checks continue after approval.</p>
+        <p>Launched through Continuity and continuously checked after launch.</p>
       </div>
       {state.markets.length === 0 ? (
         <div className={styles.registeredMarketEmpty}>
@@ -83,15 +95,15 @@ export function RegisteredMarkets() {
         <div className={styles.registeredMarketTable} role="table" aria-label="Protected markets">
           <div className={styles.registeredMarketHeader} role="row">
             <span role="columnheader">Market</span>
-            <span role="columnheader">Protection</span>
-            <span role="columnheader">Curve</span>
-            <span role="columnheader">Last checked</span>
-            <span role="columnheader">Launch</span>
+            <span role="columnheader">Status</span>
+            <span role="columnheader">Curve progress</span>
+            <span role="columnheader">Last check</span>
+            <span role="columnheader">Actions</span>
           </div>
           {state.markets.map((market) => (
             <div className={styles.registeredMarketRow} key={market.id} role="row">
               <div role="cell">
-                <strong>{market.quoteSymbol}</strong>
+                <strong>{market.baseSymbol} / {market.quoteSymbol}</strong>
                 <span>{compactAddress(market.baseMint)} / {compactAddress(market.quoteMint)}</span>
               </div>
               <span data-state={market.status} role="cell">{displayState(market.status)}</span>
@@ -106,14 +118,31 @@ export function RegisteredMarkets() {
                   ? `${displayTime(market.latestObservation.observedAt)} UTC`
                   : "Awaiting first scan"}
               </span>
-              <a
-                href={`https://solscan.io/tx/${market.launchSignature}`}
-                rel="noreferrer"
-                role="cell"
-                target="_blank"
-              >
-                {compactAddress(market.launchSignature)}
-              </a>
+              <div className={styles.registeredMarketActions} role="cell">
+                {market.status === "ACTIVE" || market.status === "GRADUATED" ? (
+                  <a
+                    href={jupiterTradeUrl(market)}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    Trade ↗
+                  </a>
+                ) : null}
+                <a
+                  href={`https://solscan.io/account/${market.virtualPoolAddress}`}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  Pool ↗
+                </a>
+                <a
+                  href={`https://solscan.io/tx/${market.launchSignature}`}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  Launch ↗
+                </a>
+              </div>
             </div>
           ))}
         </div>

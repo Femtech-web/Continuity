@@ -153,8 +153,8 @@ export function LaunchPlanReview({
       <div className={styles.launchReviewHeader}>
         <div className={styles.panelTitle}>
           <div>
-            <span>Transaction boundary</span>
-            <strong>Instruction and account review</strong>
+            <span>Safety check</span>
+            <strong>Test the launch before approval</strong>
           </div>
         </div>
         <span className={styles.panelTag}>{statusLabel}</span>
@@ -163,10 +163,10 @@ export function LaunchPlanReview({
       {state.status === "idle" ? (
         <div className={styles.preflightEmpty}>
           <div>
-            <strong>Build against the connected operator wallet.</strong>
+            <strong>Check the connected wallet and market.</strong>
             <p>
-              Continuity authenticates the ClawPump agent, binds its wallet to
-              partner economics, builds the DBC transaction, then simulates it.
+              Continuity checks both wallets, builds the exact launch, and tests it
+              on Solana without asking for a signature.
             </p>
           </div>
           <button
@@ -175,7 +175,7 @@ export function LaunchPlanReview({
             onClick={() => void prepare()}
             type="button"
           >
-            {wallet.address ? "Prepare live preflight" : "Connect operator wallet"}
+            {wallet.address ? "Run safety check" : "Connect wallet"}
             <ProductIcon name="arrow-right" />
           </button>
         </div>
@@ -195,11 +195,11 @@ export function LaunchPlanReview({
             <ProductIcon name="warning" />
           </span>
           <div>
-            <strong>Preflight remains blocked</strong>
+            <strong>The safety check is blocked</strong>
             <p>{state.message}</p>
           </div>
           <button className={styles.secondaryAction} onClick={() => void prepare()} type="button">
-            Retry preflight
+            Retry safety check
           </button>
         </div>
       ) : null}
@@ -208,21 +208,21 @@ export function LaunchPlanReview({
         <>
           <div className={styles.authorityRoute}>
             <div>
-              <span>ClawPump partner</span>
+              <span>ClawPump agent</span>
               <strong>{state.plan.authority.clawPumpAgentName}</strong>
               <code title={state.plan.authority.clawPumpAgentWallet}>
                 {shortAddress(state.plan.authority.clawPumpAgentWallet)}
               </code>
             </div>
             <div>
-              <span>Operator signer</span>
+              <span>Signing wallet</span>
               <strong>Connected wallet</strong>
               <code title={state.plan.authority.operatorWallet}>
                 {shortAddress(state.plan.authority.operatorWallet)}
               </code>
             </div>
             <div>
-              <span>Resulting market</span>
+              <span>New market</span>
               <strong>{marketLabel}</strong>
               <code title={state.plan.transaction.pool}>
                 {shortAddress(state.plan.transaction.pool)}
@@ -264,55 +264,66 @@ export function LaunchPlanReview({
             </div>
           </section>
 
-          <div className={styles.transactionBody}>
-            <section className={styles.instructionReview}>
-              <div className={styles.transactionSectionTitle}>
-                <div>
-                  <span>Ordered instructions</span>
-                  <strong>{state.plan.instructions.length} DBC instructions</strong>
-                </div>
-                <code>{abbreviateHash(state.plan.transaction.messageHash)}</code>
-              </div>
-              <div className={styles.instructionList}>
-                {state.plan.instructions.map((instruction) => (
-                  <div key={`${instruction.index}-${instruction.dataHash}`}>
-                    <span>{instruction.index + 1}</span>
-                    <div>
-                      <strong>{instruction.name}</strong>
-                      <code>{shortAddress(instruction.programId)}</code>
-                    </div>
-                    <small>
-                      {instruction.accountCount} accounts · {instruction.writableCount} writes
-                    </small>
+          <details className={styles.preflightTechnicalDetails}>
+            <summary>
+              <span>
+                <strong>Technical transaction details</strong>
+                <small>
+                  {state.plan.instructions.length} instructions · {state.plan.accounts.length} accounts
+                </small>
+              </span>
+              <span>Inspect</span>
+            </summary>
+            <div className={styles.transactionBody}>
+              <section className={styles.instructionReview}>
+                <div className={styles.transactionSectionTitle}>
+                  <div>
+                    <span>Ordered instructions</span>
+                    <strong>{state.plan.instructions.length} DBC instructions</strong>
                   </div>
-                ))}
-              </div>
-            </section>
+                  <code>{abbreviateHash(state.plan.transaction.messageHash)}</code>
+                </div>
+                <div className={styles.instructionList}>
+                  {state.plan.instructions.map((instruction) => (
+                    <div key={`${instruction.index}-${instruction.dataHash}`}>
+                      <span>{instruction.index + 1}</span>
+                      <div>
+                        <strong>{instruction.name}</strong>
+                        <code>{shortAddress(instruction.programId)}</code>
+                      </div>
+                      <small>
+                        {instruction.accountCount} accounts · {instruction.writableCount} writes
+                      </small>
+                    </div>
+                  ))}
+                </div>
+              </section>
 
-            <section className={styles.accountReview}>
-              <div className={styles.transactionSectionTitle}>
-                <div>
-                  <span>Account diff</span>
-                  <strong>{state.plan.accounts.length} key accounts</strong>
-                </div>
-                <code>{abbreviateHash(state.plan.planHash)}</code>
-              </div>
-              <div className={styles.accountList}>
-                {state.plan.accounts.map((account) => (
-                  <div key={account.address}>
-                    <span className={styles[`account-${account.change.toLowerCase()}`]}>
-                      {account.change}
-                    </span>
-                    <div>
-                      <strong>{account.roles.join(" · ")}</strong>
-                      <code title={account.address}>{shortAddress(account.address)}</code>
-                    </div>
-                    <small>{account.signer ? "Signer" : account.writable ? "Writable" : "Read only"}</small>
+              <section className={styles.accountReview}>
+                <div className={styles.transactionSectionTitle}>
+                  <div>
+                    <span>Account changes</span>
+                    <strong>{state.plan.accounts.length} key accounts</strong>
                   </div>
-                ))}
-              </div>
-            </section>
-          </div>
+                  <code>{abbreviateHash(state.plan.planHash)}</code>
+                </div>
+                <div className={styles.accountList}>
+                  {state.plan.accounts.map((account) => (
+                    <div key={account.address}>
+                      <span className={styles[`account-${account.change.toLowerCase()}`]}>
+                        {account.change}
+                      </span>
+                      <div>
+                        <strong>{account.roles.join(" · ")}</strong>
+                        <code title={account.address}>{shortAddress(account.address)}</code>
+                      </div>
+                      <small>{account.signer ? "Signer" : account.writable ? "Writable" : "Read only"}</small>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+          </details>
 
           <div className={styles.preflightFooter}>
             <div>
@@ -350,7 +361,7 @@ export function LaunchPlanReview({
                     : "Wallet approval unavailable"}
                 </strong>
                 {state.plan.approval.enabled
-                  ? "The final wallet-signing and submission step is not enabled in this build."
+                  ? "Continue to review the exact launch and approve it in your wallet."
                   : "No signature has been requested or submitted."}
               </span>
             </div>

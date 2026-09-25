@@ -36,16 +36,16 @@ const steps: readonly TourStep[] = [
   },
   {
     eyebrow: "Product path",
-    title: "Follow one decision from risk to proof.",
+    title: "Three places. One clear workflow.",
     description:
-      "Overview shows what needs attention. Markets scans the lifecycle registry. Launch explains exactly what will be created. Activity records what Sentinel decided.",
+      "Markets shows what is live or changing. Launch creates a protected market. Activity records what Sentinel checked and decided.",
     target: '[data-tour="navigation"]',
   },
   {
     eyebrow: "Decision pipeline",
-    title: "Every sponsor has one necessary job.",
+    title: "Start with the market that needs attention.",
     description:
-      "PreStocks identifies the instrument change. Meteora proves the DBC quote rail. Jupiter and Pyth test market safety. ClawPump runs Sentinel and explains the deterministic result.",
+      "Continuity puts open transitions first, keeps active markets together, and preserves past lifecycle records for review.",
     target: '[data-tour="priority-case"]',
   },
   {
