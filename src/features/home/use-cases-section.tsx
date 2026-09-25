@@ -4,27 +4,39 @@ import { ProductIcon, type ProductIconName } from "@/components/product-icon";
 const paths = [
   {
     audience: "Anyone",
-    description: "See which stock tokens are current, retiring, expired, or missing from the issuer catalog.",
+    description: "See which stock tokens are current, retiring, expired, or no longer listed by the issuer.",
     icon: "evidence",
     title: "Track stock-token changes",
   },
   {
-    audience: "Market operators",
-    description: "Create an agent token, pair it with a verified stock quote, simulate the market, then approve it in your wallet.",
+    audience: "Reviewers",
+    description: "Open the issuer notice, exact mint addresses, deadline, and preserved proof behind a lifecycle decision.",
+    icon: "receipt",
+    title: "Verify the source",
+  },
+  {
+    audience: "Operators",
+    description: "Create an agent token, pair it with an eligible stock quote, test the transaction, then approve it in your wallet.",
     icon: "route",
     title: "Launch a protected market",
   },
   {
-    audience: "ClawPump agents",
+    audience: "Operators and agents",
     description: "Keep checking the quote asset, curve, fees, reserves, and migration after the market is live.",
     icon: "shield",
     title: "Monitor after launch",
   },
   {
     audience: "Apps and agents",
-    description: "Request deterministic lifecycle verdicts and evidence through the read-only API or MCP endpoint.",
+    description: "Request the same source-backed verdict through MCP, the read-only API, or a ClawPump skill.",
     icon: "policy",
-    title: "Use Continuity as a service",
+    title: "Connect external agents",
+  },
+  {
+    audience: "Agent owners",
+    description: "See claimable Meteora fees and the SOL each market agent keeps for operations, without mixing in pool liquidity.",
+    icon: "wallet",
+    title: "Track agent revenue",
   },
 ] as const satisfies readonly {
   audience: string;
@@ -35,14 +47,13 @@ const paths = [
 
 export function UseCasesSection() {
   return (
-    <section className="use-cases page-shell" aria-labelledby="use-cases-title">
+    <section className="use-cases page-shell" id="use-cases" aria-labelledby="use-cases-title">
       <div className="use-cases__heading">
-        <span>One safety layer, four ways in</span>
-        <h2 id="use-cases-title">What people actually do with Continuity.</h2>
+        <span>Six practical jobs</span>
+        <h2 id="use-cases-title">What Continuity does.</h2>
         <p>
-          Browse without a wallet. Connect only when you are ready to create or
-          approve a market. Agents can consume the same evidence without receiving
-          signing authority.
+          Browse and verify without a wallet. Connect only to launch. Agents can
+          use the same evidence without receiving your signing authority.
         </p>
       </div>
       <div className="use-cases__grid">
@@ -56,7 +67,7 @@ export function UseCasesSection() {
         ))}
       </div>
       <div className="use-cases__footer">
-        <span>Current proof: CONT / SPCXx is launched on Meteora and registered for Sentinel monitoring.</span>
+        <span>Live proof: CONT / SPCXx and ORBIT / SPCXx are on Meteora and registered for Sentinel monitoring.</span>
         <Link href="/app">Open the live workspace <ProductIcon name="arrow-right" /></Link>
       </div>
     </section>

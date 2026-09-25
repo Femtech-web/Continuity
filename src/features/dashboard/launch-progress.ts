@@ -1,5 +1,7 @@
 export type LaunchStep = 0 | 1 | 2 | 3 | 4;
 
+export const CONFIRMED_LAUNCH_DESTINATION = "/app/markets#protected-markets";
+
 export type RestoredLaunchPhase =
   | "draft"
   | "launched"

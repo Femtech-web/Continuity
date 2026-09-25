@@ -70,7 +70,14 @@ interface ProtectedMarketDraftIdentityRow {
   readonly token_symbol: string;
 }
 
+interface OperatorAgentIdentityRow {
+  readonly agent_name: string;
+  readonly clawpump_wallet_address: string;
+}
+
 export interface ProtectedMarketSummary extends ProtectedMarketRecord {
+  readonly agentName: string;
+  readonly agentWalletAddress: string;
   readonly baseName: string;
   readonly baseSymbol: string;
   readonly latestObservation: null | {
@@ -94,7 +101,7 @@ export async function listProtectedMarketSummaries(): Promise<
   return Object.freeze(
     await Promise.all(
       rows.map(async (row) => {
-        const [snapshots, drafts] = await Promise.all([
+        const [snapshots, drafts, agents] = await Promise.all([
           database.request<readonly MonitoringSnapshotRow[]>(
             "market_monitoring_snapshots",
             {
@@ -107,11 +114,20 @@ export async function listProtectedMarketSummaries(): Promise<
               query: `id=${postgrestEquals(row.draft_id)}&select=token_name,token_symbol&limit=1`,
             },
           ),
+          database.request<readonly OperatorAgentIdentityRow[]>(
+            "operator_agents",
+            {
+              query: `id=${postgrestEquals(String(row.operator_agent_id))}&select=agent_name,clawpump_wallet_address&limit=1`,
+            },
+          ),
         ]);
         const latest = snapshots[0];
         const draft = drafts[0];
+        const agent = agents[0];
         return Object.freeze({
           ...toMarket(row),
+          agentName: agent?.agent_name ?? "ClawPump agent",
+          agentWalletAddress: agent?.clawpump_wallet_address ?? "",
           baseName: draft?.token_name ?? "Agent token",
           baseSymbol: draft?.token_symbol ?? "Token",
           latestObservation: latest
@@ -130,14 +146,20 @@ export async function listProtectedMarketSummaries(): Promise<
   );
 }
 
-export async function listProtectedMarketsForMonitoring(operatorId?: number) {
+export async function listProtectedMarketsForMonitoring(
+  operatorId?: number,
+  marketId?: string,
+) {
   const operatorFilter = operatorId === undefined
     ? ""
     : `&operator_id=${postgrestEquals(String(operatorId))}`;
+  const marketFilter = marketId === undefined
+    ? ""
+    : `&id=${postgrestEquals(marketId)}`;
   const rows = await getSupabaseRestClient().request<readonly ProtectedMarketRow[]>(
     "protected_markets",
     {
-      query: `status=in.(ACTIVE,GRADUATED,ROLLOVER_REQUIRED)${operatorFilter}&select=*&order=created_at.asc`,
+      query: `status=in.(ACTIVE,GRADUATED,ROLLOVER_REQUIRED)${operatorFilter}${marketFilter}&select=*&order=created_at.asc`,
     },
   );
   return Object.freeze(rows.map(toMarket));

@@ -49,7 +49,8 @@ browser key for `NEXT_PUBLIC_SOLANA_RPC_URL`.
 
 1. Open `https://continuity-alpha-rouge.vercel.app/app`.
 2. Confirm it redirects to `/app/markets`.
-3. Confirm **Markets**, **Launch**, and **Activity** are the only product tabs.
+3. Confirm **Markets**, **Launch**, **Treasury**, and **Activity** are the only
+   product tabs.
 4. Under **Stock coverage**, open SpaceX and verify the `SPACEX → SPCXx`
    lifecycle evidence.
 5. Under **Protected markets**, confirm `CONT/SPCXx` is active. Open **Trade**
@@ -61,9 +62,10 @@ browser key for `NEXT_PUBLIC_SOLANA_RPC_URL`.
 
 Expected cost: none. Expected onchain transaction: none.
 
-## 2. Launch a second protected market
+## 2. Launch a second protected market — complete
 
-Use a new base token and a new ClawPump agent, while keeping `SPCXx` as the
+The `ORBIT/SPCXx` confidence launch is complete. These steps are retained so a
+judge can reproduce the flow with a new base token and agent, while keeping `SPCXx` as the
 verified stock quote. The other seven current PreStocks mints are monitored, but
 their live audits currently fail Meteora DBC quote-badge and transfer-fee checks.
 Continuity must not label them launch-ready until those onchain requirements
@@ -162,17 +164,61 @@ npx -y @modelcontextprotocol/inspector
 
 In the Inspector:
 
-1. choose **Streamable HTTP**;
-2. enter `https://continuity-alpha-rouge.vercel.app/api/mcp`;
-3. connect and list tools;
-4. run `list_market_lifecycle` with `{}`;
-5. run `get_market_evidence` with `{ "slug": "spacex" }`;
-6. run `run_quote_rail_scan` with
+1. on the **Servers** screen, click **Add Servers** in the top-right;
+2. choose **Streamable HTTP** and name the server `continuity`;
+3. enter `https://continuity-alpha-rouge.vercel.app/api/mcp` as the URL;
+4. leave authentication, headers, command, and arguments empty, then save;
+5. switch the new `continuity` server on and open its **Tools** view;
+6. list tools and confirm the three tools below appear;
+7. run `list_market_lifecycle` with `{}`;
+8. run `get_market_evidence` with `{ "slug": "spacex" }`;
+9. run `run_quote_rail_scan` with
    `{ "idempotencyKey": "submission-mcp-2026-09-25" }`.
 
 Capture the tool list and the final scan result showing the verdict, evidence
-hash, record hash, and next run time. Refresh **Activity** to confirm the MCP run
-was persisted.
+hash, record hash, and next run time. Open **Activity** and leave it visible;
+Sentinel history polls Supabase and should show the new `MCP` row within about
+15 seconds without a manual refresh. A blocked or review-required safety verdict
+is still a successful MCP test: it proves the external client received the
+deterministic decision without receiving wallet authority.
+
+### Verified external MCP proof — 25 September 2026
+
+The deployed endpoint returned HTTP 200 for all three tools from an independent
+client. The persisted scan returned:
+
+- run ID: `0f564b58-b05a-4dc7-ac06-fc14b693bc33`;
+- trigger: `MCP`;
+- verdict: `LAUNCH_BLOCKED`;
+- action: `REVIEW_MANIFEST`;
+- evidence hash: `023eca5d071ab7d52ae5bd6b31839929735a553287a5e53792764c4e860fbb29`;
+- record hash: `a6417b0083d6e2eb32ec5bfb08a6f5c702285443fac88173d5964730a29d7b86`;
+- execution: no transaction created and no wallet signature requested.
+
+This is application evidence, not an onchain transaction, so it is recorded in
+this runbook rather than the mainnet transaction ledger.
+
+### Captured MCP Inspector evidence
+
+The submitted external-client test is preserved in the repository:
+
+1. [Connected Continuity server](evidence/mcp-inspector/01-connected-server.png)
+   — Streamable HTTP connection to the deployed `/api/mcp` endpoint.
+2. [Lifecycle registry result](evidence/mcp-inspector/02-lifecycle-registry.png)
+   — independently returned current and historical lifecycle records.
+3. [Sentinel scan result](evidence/mcp-inspector/03-sentinel-scan.png)
+   — MCP-triggered decision with evidence and reason codes, with no transaction
+   or wallet authority granted.
+
+The captured Inspector scan has run ID
+`0350e889-e3b9-42a4-afe9-40c78e93d236`, trigger `MCP`, action
+`REVIEW_MANIFEST`, and verdict `LAUNCH_BLOCKED`. Together with the independently
+verified hash-chained run above, it proves both repeatable client access and
+durable server-side persistence.
+
+These three captures are sufficient MCP proof. A separate screenshot is useful
+only if the demo also shows the matching `MCP` entry appearing automatically in
+the in-product Sentinel history.
 
 Expected cost: none. Expected onchain transaction: none.
 
@@ -204,6 +250,9 @@ transaction.
 9. Capture the enabled skill, the agent result, and the automation/run record.
 
 Expected cost: model usage only. Expected onchain transaction: none.
+
+The maintained evidence checklist, official-source links, and alternative MCP
+tool route are in [`external-agent-access.md`](external-agent-access.md).
 
 ## 6. Prove the paid x402 service
 
@@ -258,6 +307,12 @@ The paid retry should return the Continuity Sentinel answer. Capture:
 If a buyer agent needs funding, fund only the exact quoted payment plus the
 small buffer shown by ClawPump. Send the funding and settlement signatures to
 the maintainer so they can be added to the mainnet evidence document.
+
+For the current ClawPump buyer-agent flow, enable its built-in `x402` skill,
+run `x402_pay_check` first, verify the quote with the user, then run `x402_pay`
+with `confirm_payment: true` and a matching `max_amount_usd` cap. See
+[`external-agent-access.md`](external-agent-access.md) for the exact evidence
+screenshots and official references.
 
 ## Final evidence required before recording the video
 

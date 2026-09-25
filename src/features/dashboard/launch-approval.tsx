@@ -4,12 +4,14 @@ import { getBase58Decoder } from "@solana/kit";
 import { useConnectedWallet } from "@solana/kit-plugin-wallet/react";
 import { useClient, useSignAndSendTransaction } from "@solana/react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   solanaChain,
   type ContinuitySolanaClient,
 } from "@/features/wallet/solana-client";
 import styles from "./dashboard.module.css";
+import { CONFIRMED_LAUNCH_DESTINATION } from "./launch-progress";
 
 type ConnectedWalletState = NonNullable<
   ReturnType<ContinuitySolanaClient["wallet"]["getState"]>["connected"]
@@ -78,6 +80,7 @@ function ConnectedLaunchApproval({
   marketLabel: string;
   onConfirmed?: (result: { readonly marketId: string | null; readonly signature: string }) => void;
 }>) {
+  const router = useRouter();
   const signAndSendTransaction = useSignAndSendTransaction(account, solanaChain);
   const [state, setState] = useState<ApprovalState>({ status: "idle" });
 
@@ -99,6 +102,7 @@ function ConnectedLaunchApproval({
         };
         setState({ ...result, status: "confirmed" });
         onConfirmed?.(result);
+        router.push(CONFIRMED_LAUNCH_DESTINATION);
         return;
       }
       if (response.status !== 202) {

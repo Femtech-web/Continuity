@@ -35,6 +35,7 @@ into the human operator wallet are private operational setup and are omitted.
 | UTC time | Purpose | From network | Destination | Amount | Signature / transaction | Status | Verified by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 2026-09-25 10:08:52 UTC | Fund Continuity Sentinel from human operator | Solana mainnet | `2WS9kyBPFwgfoepmye5VpxbM4PrBa23f6GuiySJmikSQ` | `0.005 SOL` received | [`2VWsbq…EKhuS`](https://solscan.io/tx/2VWsbqoH2MxXUcSeXER7m5b9ypuxkXAy9qnSdtWXv36k7KLhkqVxweJq2rNVyRAVLkHmV7gRbgZRU9RYPWJEKhuS) | Finalized · slot `450321409` · fee `0.000005005 SOL` | Solana RPC |
+| 2026-09-25 15:52:53 UTC | Fund Orbit Guardian from human operator | Solana mainnet | `2oenA5FK3xWEANyUxBMNcUvFFrJcHRBNjHJiv9iKcM9Z` | `0.005 SOL` received | [`2xUCYV…f139q`](https://solscan.io/tx/2xUCYV5sCHXtahHGwYiSdS5nsrn6bzisY5AGjWNMkEG1c4TCXeW1FzdwdR4wjKjRtSw497nTqAu58HSTUdkf139q) | Finalized · slot `450398487` · fee `0.000005005 SOL` | Solana RPC |
 
 ## Protected-market launch attempts
 
@@ -80,6 +81,50 @@ Independent RPC verification at slot `450334263` found:
 - the DBC configuration owned by `dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN`;
 - the DBC virtual pool owned by `dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN`.
 
+### ORBIT / SPCXx — confirmed
+
+```text
+Attempt ID: 99e51723-c2cd-4bf1-98e2-ba5d853d587d
+UTC time: 2026-09-25 15:59:52 UTC
+Cluster: Solana mainnet-beta
+Operator: HknktYe69MFMHiP6wktLoYia4W85FGH5pYXBFFMWJTgk
+ClawPump agent: Orbit Guardian
+ClawPump agent ID: ebfe8e98-c7d8-4876-9ece-0d6d63eda323
+ClawPump agent wallet: 2oenA5FK3xWEANyUxBMNcUvFFrJcHRBNjHJiv9iKcM9Z
+Base token: Orbit Guard (ORBIT)
+Quote token: SPCXx
+Quote mint: Xs3oZwbHvqis4NYcf4YKWmEia2eC84wSiVrcYcTqpH8
+Lifecycle manifest: PreStocks SPACEX → SPCXx reference evidence
+DBC configuration hash: 23669754dcf04859eb5617650caecdac94f855897684c7f42b0491daa0b466b9
+Plan hash: aa1b92c58d87f3c619583577ff4a7c159f1bc49ca944d70adab4b95428874389
+Reviewed transaction-message hash: e22d673c16b31cea73bcf0354eb2769940bf8144686b519fe9b4521a0d4cce24
+Recent blockhash: JCrs2CeicPkhisbpji8cmWwfHkxTWio9s4BwTYj6BhLY
+Simulation: Passed before approval
+Onchain result: 145,494 compute units; no transaction error
+Network fee: 15,000 lamports
+Operator debit including created-account rent: 26,621,520 lamports
+Wallet decision: Approved by the connected human operator
+Transaction signature: 5a7MHhWV7hQ1VEkwrCRQohpNHgacCbZNdDLkMn8XfPZMe6KwGfJwXij6nbWLHMZk2LkUVwydpoo7NnjzyLYABK28
+Confirmation: Finalized at slot 450400048
+ORBIT/base mint: CuRACMHSYEFS32Cq9icPUkZdazBXvaKArtLoq8bwjkgG
+Meteora DBC configuration: AtDU5jy5eprpEaDpWtBZztkycvJRqaNGSBSExHq6Ya1b
+Meteora virtual pool: EBAYsw8Y9HzVinacauNAx11um8QUNAsLCShNeNV8M7jn
+Migration pool: Not created; the DBC curve has not graduated
+Supabase protected-market record: d9e27aa3-0a5a-4001-b661-aace21d6401e · ACTIVE
+Decision receipt hash: 8b871cd2634ac2e66a5a755b5bb8eac7858834b29057fa84cfc608e6e1774b08
+Explorer: https://solscan.io/tx/5a7MHhWV7hQ1VEkwrCRQohpNHgacCbZNdDLkMn8XfPZMe6KwGfJwXij6nbWLHMZk2LkUVwydpoo7NnjzyLYABK28
+Pool: https://solscan.io/account/EBAYsw8Y9HzVinacauNAx11um8QUNAsLCShNeNV8M7jn
+Outcome: Confirmed, registered, and reconciled by Sentinel
+Failure diagnostics: None
+Verified by: Continuity confirmation route, Supabase Data API, and independent finalized Solana RPC
+```
+
+Independent finalized RPC verification found:
+
+- the ORBIT mint owned by `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`;
+- the DBC configuration owned by `dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN`;
+- the DBC virtual pool owned by `dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN`.
+
 ### Attempt template
 
 Copy this section for each real attempt and replace every `Pending` value.
@@ -120,6 +165,7 @@ Verified by: Pending
 | Market | Base mint | Quote mint | DBC config | Virtual pool | Launch signature | Monitoring status |
 | --- | --- | --- | --- | --- | --- | --- |
 | CONT / SPCXx | `Hae9…epua` | `Xs3o…qpH8` | `GVmo…SYc` | `HSok…Cnib` | [`3Sbk…zch4`](https://solscan.io/tx/3Sbkexa2DvYaoGrn4ryXcy7SCaXa4GxgpWBVZnJfv5Y6L5hK4Rgc8bW43bNxhXEDu7wtN2J4STFv1MuELSKszch4) | Active · `POOL_LIVE` · lifecycle current |
+| ORBIT / SPCXx | `CuRA…jkgG` | `Xs3o…qpH8` | `AtDU…Ya1b` | `EBAY…M7jn` | [`5a7M…BK28`](https://solscan.io/tx/5a7MHhWV7hQ1VEkwrCRQohpNHgacCbZNdDLkMn8XfPZMe6KwGfJwXij6nbWLHMZk2LkUVwydpoo7NnjzyLYABK28) | Active · `POOL_LIVE` · lifecycle current |
 
 ## Post-launch monitoring evidence
 
@@ -131,3 +177,4 @@ judge-readable proof.
 | UTC time | Market | Check | Verdict | Sentinel run / receipt | Evidence |
 | --- | --- | --- | --- | --- | --- |
 | 2026-09-25 11:19:53 UTC | CONT / SPCXx | Initial registered-market reconciliation | `ACTIVE` · lifecycle `CURRENT` · DBC `POOL_LIVE` | `6de402b9…ef218` | 0 alerts; opening fee 100 bps; curve progress rounds to 0 bps; reserves persisted in Supabase |
+| 2026-09-25 16:09:35 UTC | ORBIT / SPCXx | Initial registered-market reconciliation | `ACTIVE` · lifecycle `CURRENT` · DBC `POOL_LIVE` | `8b871cd2…74b08` | 0 alerts; opening fee 100 bps; curve progress 0 bps; base reserve `1,000,000,000,000,000`, quote reserve `0` |

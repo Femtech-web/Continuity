@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { restoreLaunchProgress } from "./launch-progress.ts";
+import {
+  CONFIRMED_LAUNCH_DESTINATION,
+  restoreLaunchProgress,
+} from "./launch-progress.ts";
+
+test("a confirmed launch opens its protected-market monitoring row", () => {
+  assert.equal(CONFIRMED_LAUNCH_DESTINATION, "/app/markets#protected-markets");
+});
 
 test("a confirmed draft with a registered market restores the completed launch", () => {
   assert.deepEqual(

@@ -36,9 +36,9 @@ const steps: readonly TourStep[] = [
   },
   {
     eyebrow: "Product path",
-    title: "Three places. One clear workflow.",
+    title: "Four places. One clear workflow.",
     description:
-      "Markets shows what is live or changing. Launch creates a protected market. Activity records what Sentinel checked and decided.",
+      "Markets shows what is live or changing. Launch creates a protected market. Treasury shows agent-owned fees and reserves. Activity records what Sentinel checked and decided.",
     target: '[data-tour="navigation"]',
   },
   {

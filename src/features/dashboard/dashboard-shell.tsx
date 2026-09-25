@@ -9,6 +9,7 @@ import {
   type QuoteRailReceiptBundle,
 } from "@/domain/continuity/quote-rail-receipt";
 import { WalletAccessButton } from "@/features/wallet/wallet-access";
+import { AgentTreasuries } from "./agent-treasuries";
 import { LiveAgentRuns } from "./live-agent-runs";
 import { MarketsRegistry } from "./markets-registry";
 import { ProtectedMarketLaunch } from "./protected-market-launch";
@@ -21,7 +22,8 @@ export type DashboardView =
   | "assetEvidence"
   | "market"
   | "markets"
-  | "receipt";
+  | "receipt"
+  | "treasury";
 
 interface DashboardShellProps {
   readonly experience?: DashboardExperience;
@@ -37,6 +39,7 @@ interface NavigationItem {
 const navigationItems: readonly NavigationItem[] = [
   { label: "Markets", view: "markets" },
   { label: "Launch", view: "market" },
+  { label: "Treasury", view: "treasury" },
   { label: "Activity", view: "receipt" },
 ];
 
@@ -79,6 +82,15 @@ function ViewHeader({
         experience === "mainnet"
           ? "See the daily automatic checks, their results, and any checks requested by people or agents."
           : "Export portable proof of the evidence, attestation, refusal, and prepared successor market.",
+      action: "Open markets",
+      target: "markets" as const,
+    },
+    treasury: {
+      title: experience === "mainnet" ? "Agent treasury" : "Treasury preview",
+      description:
+        experience === "mainnet"
+          ? "See the market fees each agent can claim and the SOL it keeps available for operations."
+          : "See how a protected market separates earned fees, operating funds, and future vault allocations.",
       action: "Open markets",
       target: "markets" as const,
     },
@@ -216,6 +228,19 @@ function ReceiptPage({
   );
 }
 
+function TreasuryPage({
+  experience,
+}: {
+  readonly experience: DashboardExperience;
+}) {
+  return (
+    <>
+      <ViewHeader experience={experience} view="treasury" />
+      <AgentTreasuries experience={experience} />
+    </>
+  );
+}
+
 export async function DashboardShell({
   experience = "demo",
   selectedAsset,
@@ -312,6 +337,7 @@ export async function DashboardShell({
           {view === "receipt" ? (
             <ReceiptPage experience={experience} receipt={receipt} />
           ) : null}
+          {view === "treasury" ? <TreasuryPage experience={experience} /> : null}
         </div>
       </div>
     </main>

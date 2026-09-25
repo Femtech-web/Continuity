@@ -15,16 +15,16 @@ export function HeroSection() {
             <span>Markets need a way to follow.</span>
           </h1>
           <p className="hero__lede">
-            Continuity verifies lifecycle notices before ClawPump agents launch
-            or act through Meteora DBC. If a quote token is retired, it blocks
-            the managed action and prepares the successor market with evidence.
+            Continuity verifies stock-token changes, helps operators launch agent
+            markets with an eligible stock quote, and keeps checking those markets
+            after they go live. People and agents share the same source-backed answer.
           </p>
           <div className="hero__actions">
-            <Link className="button button--primary" href="/demo">
-              Watch the wallet-free demo <ArrowIcon />
+            <Link className="button button--primary" href="/app">
+              Open live markets <ArrowIcon />
             </Link>
-            <Link className="text-link" href="/app">
-              Open the mainnet console
+            <Link className="text-link" href="/demo">
+              Watch the wallet-free replay
             </Link>
           </div>
         </div>

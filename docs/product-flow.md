@@ -158,22 +158,23 @@ If the quote later becomes unsafe, Continuity removes the Trade action from its
 interface, stops Continuity-managed automation, records the reason, and alerts
 the operator. It cannot freeze, edit, or remove a third-party onchain pool.
 
-## Where an agent treasury fits later
+## Agent treasury after launch
 
 Meteora can record trading fees claimable by the ClawPump agent wallet bound to
 a protected market. Those fees are not the same as the liquidity traders use
 inside the pool.
 
-A future Agent Treasury can let that agent claim only its earned fees, retain a
-small operating reserve, and place a capped amount into an approved Solana
-lending vault. It must never move pool reserves, user deposits, or the human
-operator's assets. The first activation and deposit require operator approval;
-later automation remains limited by exact destinations, amount caps, receipts,
-and an automatic pause whenever Sentinel reports risk.
+A read-only **Treasury** workspace is live after **Launch** in the product navigation. For each protected
+market it reads the official Meteora partner-fee balance, verifies that the
+bound ClawPump agent is the fee authority, and shows the SOL retained in that
+agent wallet for operations. It never requests a signature or includes pool
+reserves, public user balances, or the human operator's funds.
 
-This is a planned extension, not a live feature in the current submission. The
-complete proposed flow and controls are documented in
-[`research/agent-treasury.md`](research/agent-treasury.md).
+Claiming, swapping, and lending are still locked. Enabling them requires a
+verified ClawPump signing path, fixed destinations and caps, operator approval,
+receipts, withdrawal support, and an automatic pause whenever Sentinel reports
+risk. The complete proposed flow and controls are documented in
+[`agent-treasury.md`](agent-treasury.md).
 
 ## Why is only `SPCXx` launch-ready today?
 
@@ -239,6 +240,10 @@ interfaces to list lifecycle records, inspect evidence, and request a quote-rail
 scan. They receive data and verdicts, not an operator's private key or wallet
 authority.
 
+The deployed MCP integration has been tested from the official MCP Inspector.
+Screenshots and the exact skill/x402 verification steps are in
+[`external-agent-access.md`](external-agent-access.md).
+
 ### Paid agent consumer: use x402
 
 x402 is a pay-per-request API. The Sentinel agent can publish the same scan as a
@@ -263,7 +268,10 @@ Launch page.
 - stock-aware Meteora DBC construction and Solana simulation;
 - explicit wallet approval and confirmation;
 - the confirmed mainnet `CONT/SPCXx` market;
+- the confirmed mainnet `ORBIT/SPCXx` market;
 - persisted protected-market monitoring;
+- a dedicated read-only Treasury workspace for claimable agent fees and SOL
+  operating reserves;
 - read-only HTTP, MCP, skill, scheduled-run, and x402 service code.
 
 ### Replay used for explanation
@@ -284,14 +292,12 @@ claim to rewrite the old pool.
 
 ### Final submission proof still to run
 
-The remaining work is operational verification, not another architecture
-rewrite:
+The second `ORBIT/SPCXx` market and external MCP client test are complete. The
+remaining submission evidence is operational:
 
-1. launch the second `ORBIT/SPCXx` confidence market;
-2. trigger a fresh scheduled Sentinel check;
-3. call the MCP from an independent client;
-4. install and run the Sentinel skill in ClawPump;
-5. complete one paid x402 request.
+1. install and run the Sentinel skill in ClawPump;
+2. trigger its scheduled agent automation once; and
+3. complete one paid x402 request.
 
 The exact sequence and expected evidence are in
 [`submission-test-runbook.md`](submission-test-runbook.md). Mainnet signatures

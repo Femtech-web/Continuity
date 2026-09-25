@@ -10,8 +10,8 @@ export function SiteHeader({ compact = false }: { compact?: boolean }) {
       <nav aria-label="Primary navigation">
         {!compact && (
           <>
+            <Link href="#use-cases">Product</Link>
             <Link href="#how-it-works">How it works</Link>
-            <Link href="#sentinel">Sentinel</Link>
             <Link href="#proof">Proof</Link>
           </>
         )}

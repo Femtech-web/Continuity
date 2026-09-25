@@ -3193,6 +3193,227 @@
 }
 .registeredMarketActions a:hover { text-decoration: underline; }
 
+.agentTreasuries {
+  margin-top: 48px;
+}
+
+.agentTreasuries .sectionHeading > div > span {
+  display: block;
+  margin-bottom: 5px;
+  color: #287b58;
+  font-size: 11px;
+  font-weight: 720;
+  text-transform: uppercase;
+}
+
+.treasuryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.treasuryCard {
+  overflow: hidden;
+  border: 1px solid rgba(18, 31, 27, 0.11);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 100% 0, rgba(118, 238, 187, .13), transparent 34%),
+    rgba(250, 248, 242, 0.8);
+}
+
+.treasuryCard > header,
+.treasuryCard > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 20px;
+}
+
+.treasuryCard > header {
+  border-bottom: 1px solid rgba(18, 31, 27, 0.08);
+}
+
+.treasuryCard > header div > span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.treasuryCard h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 620;
+  letter-spacing: -.025em;
+}
+
+.treasuryCard > header > span {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(42, 168, 115, .08);
+  color: #287b58;
+  font-size: 10px;
+  font-weight: 730;
+  text-transform: uppercase;
+}
+
+.treasuryCard > header > span[data-state="PAUSED"],
+.treasuryCard > header > span[data-state="UNAVAILABLE"] {
+  background: rgba(178, 76, 59, .08);
+  color: #a64d43;
+}
+
+.treasuryMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-bottom: 1px solid rgba(18, 31, 27, 0.08);
+}
+
+.treasuryMetrics > div {
+  min-width: 0;
+  padding: 17px 18px;
+  border-right: 1px solid rgba(18, 31, 27, 0.08);
+}
+
+.treasuryMetrics > div:last-child { border-right: 0; }
+.treasuryMetrics span,
+.treasuryMetrics small,
+.treasuryMetrics strong { display: block; }
+.treasuryMetrics span,
+.treasuryMetrics small { color: var(--muted); font-size: 10px; }
+.treasuryMetrics strong {
+  margin: 6px 0 4px;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.treasuryCard > p {
+  min-height: 55px;
+  margin: 0;
+  padding: 15px 20px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.treasuryCard > footer {
+  border-top: 1px solid rgba(18, 31, 27, 0.08);
+  padding-block: 14px;
+}
+
+.treasuryCard > footer > span {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.treasuryCard > footer > div {
+  display: flex;
+  gap: 13px;
+}
+
+.treasuryCard > footer a {
+  color: #287b58;
+  font-size: 11px;
+  font-weight: 680;
+  text-decoration: none;
+}
+
+.treasuryCard > footer a:hover { text-decoration: underline; }
+
+.treasuryBoundary {
+  display: flex;
+  gap: 9px;
+  margin-top: 12px;
+  padding: 12px 15px;
+  border: 1px solid rgba(42, 168, 115, .16);
+  border-radius: 10px;
+  background: rgba(42, 168, 115, .05);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.treasuryBoundary strong { flex: 0 0 auto; color: #287b58; }
+
+.treasuryPreviewFlow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(18, 31, 27, 0.11);
+  border-radius: 14px;
+  background: rgba(250, 248, 242, 0.78);
+}
+
+.treasuryPreviewFlow > div {
+  min-height: 178px;
+  padding: 22px;
+  border-right: 1px solid rgba(18, 31, 27, 0.09);
+}
+
+.treasuryPreviewFlow > div:last-child { border-right: 0; }
+.treasuryPreviewFlow span {
+  color: #287b58;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+.treasuryPreviewFlow strong,
+.treasuryPreviewFlow p { display: block; }
+.treasuryPreviewFlow strong {
+  margin-top: 28px;
+  color: var(--text);
+  font-size: 15px;
+}
+.treasuryPreviewFlow p {
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.treasuryUnavailable {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 48px;
+  padding: 22px;
+  border: 1px solid rgba(18, 31, 27, 0.11);
+  border-radius: 14px;
+  background: rgba(250, 248, 242, 0.78);
+}
+
+.treasuryUnavailable strong { color: var(--text); font-size: 14px; }
+.treasuryUnavailable p { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
+.treasuryUnavailable button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgba(39, 122, 87, 0.2);
+  border-radius: 8px;
+  background: rgba(42, 168, 115, 0.07);
+  color: #286d55;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 690;
+}
+
+.treasurySkeleton {
+  height: 220px;
+  margin-top: 48px;
+  border-radius: 14px;
+  background: linear-gradient(90deg, rgba(255,255,255,.35), rgba(255,255,255,.75), rgba(255,255,255,.35));
+  background-size: 220% 100%;
+  animation: observation-shimmer 1.2s linear infinite;
+}
+
 .marketMonitorSkeleton {
   height: 124px;
   margin-top: 46px;
@@ -3917,6 +4138,23 @@
     justify-content: flex-start;
     padding-top: 4px;
   }
+  .treasuryGrid { grid-template-columns: 1fr; }
+  .treasuryPreviewFlow { grid-template-columns: 1fr; }
+  .treasuryPreviewFlow > div {
+    min-height: auto;
+    border-right: 0;
+    border-bottom: 1px solid rgba(18, 31, 27, 0.09);
+  }
+  .treasuryPreviewFlow > div:last-child { border-bottom: 0; }
+  .treasuryMetrics { grid-template-columns: 1fr; }
+  .treasuryMetrics > div {
+    border-right: 0;
+    border-bottom: 1px solid rgba(18, 31, 27, 0.08);
+  }
+  .treasuryMetrics > div:last-child { border-bottom: 0; }
+  .treasuryCard > footer { align-items: flex-start; flex-direction: column; }
+  .treasuryBoundary { flex-direction: column; }
+  .treasuryUnavailable { align-items: flex-start; flex-direction: column; }
 
   .launchIdentity { grid-template-columns: 1fr; }
   .launchFlow ol { grid-template-columns: 1fr; }

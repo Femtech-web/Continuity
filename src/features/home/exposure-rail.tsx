@@ -1,14 +1,14 @@
 export function ExposureRail() {
   return (
-    <div className="rail-shell" aria-label="Quote rail rollover scenario">
+    <div className="rail-shell" aria-label="Continuity product flow">
       <div className="rail-context">
         <div>
-          <span>Scenario replay</span>
-          <strong>ClawPump market quote changed</strong>
+          <span>Live coverage</span>
+          <strong>8 stock tokens monitored</strong>
         </div>
         <div>
-          <span>Lifecycle manifest</span>
-          <strong>PreStocks · hash verified</strong>
+          <span>Protected markets</span>
+          <strong>2 live · checked automatically</strong>
         </div>
       </div>
 
@@ -30,27 +30,27 @@ export function ExposureRail() {
         </svg>
 
         <div className="rail-node rail-node--source">
-          <span className="rail-node__status">Active quote rail</span>
-          <strong>CONT / SPACEX</strong>
-          <small>Replay fixture · retiring quote</small>
+          <span className="rail-node__status">Issuer lifecycle</span>
+          <strong>SPACEX → SPCXx</strong>
+          <small>Exact mints · source captured</small>
         </div>
 
         <div className="rail-node rail-node--guardian">
-          <span className="rail-node__status">Sentinel verdict</span>
-          <strong>ROLLOVER</strong>
-          <small>Managed actions held</small>
+          <span className="rail-node__status">Continuity Sentinel</span>
+          <strong>VERIFY</strong>
+          <small>Evidence · launch · monitor</small>
         </div>
 
         <div className="rail-node rail-node--target">
-          <span className="rail-node__status">Prepared successor</span>
-          <strong>CONT / SPCXx</strong>
-          <small>New immutable config</small>
+          <span className="rail-node__status">Protected markets</span>
+          <strong>2 LIVE MARKETS</strong>
+          <small>CONT + ORBIT / SPCXx</small>
         </div>
       </div>
 
       <div className="rail-result">
-        <span>Existing DBC configuration remains unchanged</span>
-        <strong>Successor market prepared · no transaction submitted</strong>
+        <span>Old pools remain immutable</span>
+        <strong>Eligible successors launch separately · monitoring continues</strong>
       </div>
     </div>
   );

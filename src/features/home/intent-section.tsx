@@ -5,16 +5,16 @@ export function IntentSection() {
       aria-labelledby="intent-title"
     >
       <div className="intent-copy">
-        <h2 id="intent-title">The pool can stay live after its quote token is obsolete.</h2>
+        <h2 id="intent-title">An old market cannot simply swap in a new stock token.</h2>
         <p>
-          A Meteora DBC configuration is immutable. That is useful for trust,
-          but it also means an issuer event cannot be handled by silently
-          swapping one quote mint for another.
+          A Meteora market keeps the exact token addresses it launched with.
+          When an issuer replaces a stock token, the existing pool does not
+          automatically update.
         </p>
         <p>
-          Continuity watches the dependency itself. It proves the lifecycle
-          change, stops its ClawPump agent from deepening the obsolete rail, and
-          prepares a new market whose configuration can be reviewed before signing.
+          Continuity proves the change, stops its own managed actions from using
+          the obsolete token, and helps an operator review a separate successor
+          market before any wallet signs.
         </p>
       </div>
 

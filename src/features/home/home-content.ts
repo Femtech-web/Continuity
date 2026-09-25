@@ -56,23 +56,23 @@ export const sponsorTechnologies = [
 export const agentStages = [
   {
     name: "Scout",
-    role: "Capture the evidence",
+    role: "Observe",
     icon: "evidence",
     description:
-      "Preserves the issuer source, exact mints, deadline, observation time and content hash.",
+      "Capture the issuer source, exact token addresses, deadline, observation time, and proof hash.",
   },
   {
     name: "Guardian",
-    role: "Publish the facts",
+    role: "Decide",
     icon: "shield",
     description:
-      "Turns verified evidence into a versioned manifest that deterministic systems can reproduce.",
+      "Turn the verified facts into a repeatable answer: safe, review, stop, or prepare a successor.",
   },
   {
     name: "Operator",
-    role: "Control the market",
+    role: "Continue",
     icon: "route",
     description:
-      "Attests the DBC quote rail, refuses unsafe managed actions, and prepares a successor config.",
+      "Launch only after a wallet-approved simulation, then keep checking the live market and agent account.",
   },
 ] as const satisfies readonly AgentStage[];

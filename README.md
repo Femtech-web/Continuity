@@ -16,6 +16,8 @@ do after launch, and which boundaries remain. For final verification, use
 [`docs/submission-test-runbook.md`](docs/submission-test-runbook.md). Confirmed
 mainnet proof is indexed in
 [`docs/mainnet-transaction-evidence.md`](docs/mainnet-transaction-evidence.md).
+External MCP, ClawPump skill, and x402 verification is documented in
+[`docs/external-agent-access.md`](docs/external-agent-access.md).
 
 ## Contents
 
@@ -32,7 +34,7 @@ mainnet proof is indexed in
 11. [Confirmed mainnet proof](#confirmed-mainnet-proof)
 12. [Roles and authority](#product-roles-and-authority)
 13. [Run, configure, and verify](#run-locally)
-14. [Future agent treasury](#future-agent-treasury)
+14. [Agent treasury](#agent-treasury)
 
 ## Beginner glossary
 
@@ -394,11 +396,12 @@ Read a registered Meteora market
   monitoring snapshots, and operator alerts
 - ClawPump Sentinel skill, x402-shaped scan endpoint, and read-only MCP tools
 - Hash-chained Sentinel and monitoring evidence
-- Confirmed `CONT/SPCXx` mainnet market with a persisted `POOL_LIVE` post-launch scan
+- Confirmed `CONT/SPCXx` and operator-created `ORBIT/SPCXx` mainnet markets,
+  each with a persisted `POOL_LIVE` post-launch scan
 
 ## Confirmed mainnet proof
 
-The reference launch is complete:
+Two end-to-end launches are complete. The reference market is:
 
 - market: `CONT / SPCXx`;
 - transaction: [`3Sbk…zch4`](https://solscan.io/tx/3Sbkexa2DvYaoGrn4ryXcy7SCaXa4GxgpWBVZnJfv5Y6L5hK4Rgc8bW43bNxhXEDu7wtN2J4STFv1MuELSKszch4);
@@ -410,6 +413,14 @@ The reference launch is complete:
 - Supabase state: launch attempt `CONFIRMED`, protected market `ACTIVE`.
 - first monitoring receipt: `6de402b9…ef218` with lifecycle `CURRENT` and DBC state `POOL_LIVE`.
 
+The custom operator flow independently launched `ORBIT/SPCXx`:
+
+- transaction: [`5a7M…BK28`](https://solscan.io/tx/5a7MHhWV7hQ1VEkwrCRQohpNHgacCbZNdDLkMn8XfPZMe6KwGfJwXij6nbWLHMZk2LkUVwydpoo7NnjzyLYABK28);
+- ORBIT mint: [`CuRA…jkgG`](https://solscan.io/token/CuRACMHSYEFS32Cq9icPUkZdazBXvaKArtLoq8bwjkgG);
+- Meteora DBC configuration: `AtDU5jy5eprpEaDpWtBZztkycvJRqaNGSBSExHq6Ya1b`;
+- Meteora virtual pool: `EBAYsw8Y9HzVinacauNAx11um8QUNAsLCShNeNV8M7jn`;
+- first monitoring receipt: `8b871cd2…74b08` with lifecycle `CURRENT` and DBC state `POOL_LIVE`.
+
 Independent finalized RPC reads confirm that the mint exists under the SPL Token
 program and that the configuration and virtual pool exist under Meteora DBC.
 The complete human-readable record is in
@@ -419,8 +430,8 @@ The shortest production validation sequence is in
 
 ## What is not finished
 
-- The MCP HTTP contract is regression-tested locally; a deployed external MCP
-  client session and a paid ClawPump x402 call still need captured proof.
+- The MCP endpoint has been verified from an independent MCP Inspector and its
+  screenshots are preserved under `docs/evidence/mcp-inspector`.
 - The ClawPump-hosted skill still needs to be installed/activated and exercised
   through one real scheduled run and one paid x402 request.
 - Only exact `SPCXx` is launch-enabled today. Other catalog instruments remain
@@ -551,6 +562,7 @@ Open:
 - `http://localhost:3000/app` — live-read product workspace
 - `http://localhost:3000/app/markets/spacex` — SpaceX lifecycle detail
 - `http://localhost:3000/app/launch` — create a new protected market
+- `http://localhost:3000/app/treasury` — inspect agent fees and operating reserves
 
 ## Agent access
 
@@ -558,6 +570,7 @@ Open:
 - Scan endpoint: `POST /api/v1/scans/quote-rail`
 - Sentinel runs: `GET/POST /api/v1/sentinel/runs`
 - Scheduled lifecycle and protected-market monitor: `GET /api/v1/sentinel/schedule`
+- Read-only agent treasuries: `GET /api/v1/treasuries`
 - MCP endpoint: `POST /api/mcp`
 
 The MCP server exposes `list_market_lifecycle`, `get_market_evidence`, and
@@ -652,66 +665,43 @@ and they do not currently have the required Meteora token badge. Continuity
 therefore monitors them but refuses to advertise a launch that the reviewed
 route cannot complete correctly.
 
-## Future agent treasury
+## Agent treasury
 
-The product has a credible next step: let the ClawPump agent attached to a
-protected market put **its own earned fees** to work between operating costs.
-This is not live in the current submission and it is not a vault for user
-deposits.
+Continuity now includes a read-only treasury for every protected market. It
+reads the live Meteora partner-fee balance, verifies that the onchain fee
+authority is the market's bound ClawPump agent, and shows that agent wallet's
+SOL operating reserve. The figures refresh automatically and no signature is
+requested.
 
-Continuity attaches one selected ClawPump agent to each protected-market
-record. The current workflow can reuse an owned agent, but a dedicated agent per
-market is the recommended treasury setup because its wallet, earnings, limits,
-and receipts remain easy to separate and audit.
+This is deliberately not a vault for public deposits. It never counts or moves
+trader liquidity, user tokens, or the human operator's wallet balance. If the
+fee authority does not match the registered agent, or Sentinel has paused the
+market, the treasury displays the problem instead of enabling an action.
 
-The safe design is:
+The complete intended path is:
 
 ```text
-Meteora records claimable partner fees
-  → the market's ClawPump agent claims only those earned fees
-  → a fixed reserve stays liquid for monitoring and transactions
-  → an approved, capped amount may be converted to a supported asset
-  → that amount may be supplied to an allowlisted Solana lending vault
-  → every claim, swap, deposit, withdrawal, and yield snapshot is recorded
+Read live Meteora partner fees
+  → verify the market's bound ClawPump agent is the fee authority
+  → claim only that agent's earned fees
+  → keep a fixed operating reserve
+  → optionally convert a capped amount to a supported asset
+  → supply it to one allowlisted Solana lending vault
+  → record every movement and pause automatically on Sentinel risk
 ```
 
-For the current DBC preset, curve-phase partner fees are collected in the quote
-token and the selected ClawPump agent wallet is the onchain `feeClaimer`.
-Meteora documents that the fee claimer can claim partner trading fees; the
-official program also separates claimable fees from pool reserves. ClawPump
-already provides agent wallets, destination whitelists, scheduled automations,
-spend limits, swaps, and describes Jupiter lending support. Jupiter Lend can
-earn yield on supported supplied assets.
-
-Before this becomes executable, Continuity must add a reviewed treasury policy:
-
-- use only claimed partner fees or paid-service revenue—never user balances or
-  market liquidity;
-- never borrow or use leverage;
-- keep a minimum SOL operating reserve;
-- allowlist the exact lending program and receiving accounts;
-- cap each conversion and deposit, plus a daily maximum;
-- require explicit operator approval for activation and the first deposit;
-- pause automatically when Sentinel marks the quote or market unsafe; and
-- store receipts so the operator can account for every movement.
-
-It must also verify a documented ClawPump path that lets the bound agent wallet
-sign the Meteora claim and lending transactions without exporting the agent's
-private key. The current Partner API adapter creates and verifies agents but
-does not yet prove that arbitrary transaction-signing path.
-
-The fastest credible first integration is a USDC/SOL lending deposit after fees
-are claimed and, where necessary, deliberately swapped. Directly depositing
-`SPCXx` should not be promised unless the chosen lending vault explicitly
-supports that exact mint. Full implementation is deliberately after the
-submission-critical MCP, ClawPump-skill, x402, second-launch, and monitoring
-proofs are complete.
+Only the first two steps are live today. Claiming and lending remain locked
+because the ClawPump Partner API used by Continuity has not yet proven a bounded
+transaction-signing route for the agent wallet. Continuity will not export an
+agent private key or ask the human operator to impersonate it. The next safe
+release is an operator-reviewed claim followed by one capped SOL/USDC lending
+destination—no borrowing, leverage, or automatic destination changes.
 
 Primary references: [Meteora DBC program](https://github.com/MeteoraAg/dynamic-bonding-curve),
 [ClawPump documentation](https://clawpump.tech/docs), and
 [Jupiter Lend](https://jup.ag/lend/earn).
 The implementation phases and trust boundaries are specified in
-[`docs/research/agent-treasury.md`](docs/research/agent-treasury.md).
+[`docs/agent-treasury.md`](docs/agent-treasury.md).
 
 ## Verification
 
@@ -726,5 +716,5 @@ pnpm sentinel:run
 With Supabase configured, live Sentinel API/MCP runs write durable hash-chained
 records and decision receipts there. The CLI still uses the same store boundary;
 without Supabase it falls back to `.continuity-data/`, which is ignored by Git.
-Internal research and submission notes live in `private-notes/` and are also
-excluded from Git.
+Only user- and judge-facing product, verification, and evidence documents are
+kept under `docs/`.

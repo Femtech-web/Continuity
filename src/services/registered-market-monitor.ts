@@ -23,9 +23,10 @@ export interface MarketMonitoringResult {
 
 export async function monitorRegisteredMarkets(
   operatorId?: number,
+  marketId?: string,
 ): Promise<MarketMonitoringResult> {
   const environment = readServerEnvironment();
-  const markets = await listProtectedMarketsForMonitoring(operatorId);
+  const markets = await listProtectedMarketsForMonitoring(operatorId, marketId);
   if (markets.length === 0) {
     return Object.freeze({ alertsCreated: 0, checked: 0, results: Object.freeze([]) });
   }

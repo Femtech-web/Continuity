@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { abbreviateHash } from "@/domain/continuity/canonical-json";
 import type { PersistedAgentRun } from "@/persistence/agent-run-store";
 import styles from "./dashboard.module.css";
@@ -19,6 +19,8 @@ type RunsState =
           | "SUPABASE_DURABLE";
       };
     };
+
+const SENTINEL_HISTORY_REFRESH_MS = 15_000;
 
 function displayState(value: string): string {
   return value
@@ -44,14 +46,12 @@ export function LiveAgentRuns() {
   const [state, setState] = useState<RunsState>({ status: "loading" });
   const [isRunning, setIsRunning] = useState(false);
 
-  useEffect(() => {
-    const controller = new AbortController();
-
-    async function loadRuns() {
+  const loadRuns = useCallback(
+    async (signal: AbortSignal, background = false) => {
       try {
         const response = await fetch("/api/v1/sentinel/runs?limit=20", {
           cache: "no-store",
-          signal: controller.signal,
+          signal,
         });
         const payload: unknown = await response.json();
         if (
@@ -79,7 +79,7 @@ export function LiveAgentRuns() {
           },
         });
       } catch (error) {
-        if (controller.signal.aborted) return;
+        if (signal.aborted || background) return;
         setState({
           message:
             error instanceof Error
@@ -88,11 +88,50 @@ export function LiveAgentRuns() {
           status: "error",
         });
       }
-    }
+    },
+    [],
+  );
 
-    void loadRuns();
-    return () => controller.abort();
-  }, [attempt]);
+  useEffect(() => {
+    const controller = new AbortController();
+    let refreshInFlight = false;
+
+    const refreshInBackground = async () => {
+      if (
+        refreshInFlight ||
+        controller.signal.aborted ||
+        document.visibilityState !== "visible"
+      ) {
+        return;
+      }
+      refreshInFlight = true;
+      try {
+        await loadRuns(controller.signal, true);
+      } finally {
+        refreshInFlight = false;
+      }
+    };
+
+    const initialLoadTimer = window.setTimeout(
+      () => void loadRuns(controller.signal),
+      0,
+    );
+    const refreshTimer = window.setInterval(
+      () => void refreshInBackground(),
+      SENTINEL_HISTORY_REFRESH_MS,
+    );
+    const refreshWhenVisible = () => void refreshInBackground();
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(initialLoadTimer);
+      window.clearInterval(refreshTimer);
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [attempt, loadRuns]);
 
   const runScan = async () => {
     if (isRunning) return;
@@ -223,7 +262,7 @@ export function LiveAgentRuns() {
         <section className={styles.ledgerSection} aria-labelledby="agent-run-history-title">
           <div className={styles.sectionHeading}>
             <h2 id="agent-run-history-title">Sentinel history</h2>
-            <p>Newest first · each result is tamper-evident</p>
+            <p>Updates automatically · newest first · each result is tamper-evident</p>
           </div>
           <div className={styles.ledgerTable} role="table" aria-label="Sentinel agent runs">
             <div className={`${styles.ledgerHeader} ${styles.agentRunGrid}`} role="row">

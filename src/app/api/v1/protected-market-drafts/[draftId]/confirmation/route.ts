@@ -11,6 +11,7 @@ import {
   markLaunchAttemptSubmitted,
 } from "@/persistence/launch-store";
 import { getProtectedMarketDraft } from "@/persistence/protected-market-store";
+import { monitorRegisteredMarkets } from "@/services/registered-market-monitor";
 import { verifySolanaMessageSignature } from "@/transactions/solana-message-signature";
 
 export const dynamic = "force-dynamic";
@@ -170,9 +171,22 @@ export async function POST(
       operatorAgentId: draft.operatorAgentId,
       quoteSymbol: draft.quoteSymbol,
     });
+    let monitoring: "RECORDED" | "PENDING_RETRY" = "PENDING_RETRY";
+    try {
+      const result = await monitorRegisteredMarkets(
+        session.operatorId,
+        registration.marketId,
+      );
+      if (result.checked === 1) monitoring = "RECORDED";
+    } catch {
+      // The launch is already final on Solana. A monitoring outage must not
+      // turn a confirmed transaction into a failed launch response; the
+      // scheduled Sentinel run will retry it.
+    }
     return Response.json({
       attemptId: attempt.id,
       marketId: registration.marketId,
+      monitoring,
       signature: input.signature,
       status: "CONFIRMED",
     });

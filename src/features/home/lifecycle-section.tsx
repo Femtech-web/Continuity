@@ -12,12 +12,12 @@ export function LifecycleSection() {
       <div className="page-shell">
         <div className="section-heading section-heading--dark">
           <div>
-            <h2 id="system-title">One issuer fact. Every dependent market.</h2>
+            <h2 id="system-title">One lifecycle fact, carried through the whole market.</h2>
           </div>
           <p>
-            One ClawPump agent coordinates the workflow. Evidence, mint
-            identity, DBC checks and authorization remain deterministic,
-            inspectable, and outside the language model.
+            Continuity preserves the source, makes the safety decision, and keeps
+            checking after launch. The agent explains and schedules the work; it
+            cannot invent the facts or borrow a wallet signature.
           </p>
         </div>
 

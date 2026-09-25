@@ -59,6 +59,30 @@ export interface MeteoraDbcObservation {
   };
 }
 
+export interface MeteoraPartnerTreasuryObservation {
+  readonly assets: {
+    readonly base: {
+      readonly claimed: string;
+      readonly decimals: number;
+      readonly mint: string;
+      readonly total: string;
+      readonly unclaimed: string;
+    };
+    readonly quote: {
+      readonly claimed: string;
+      readonly decimals: number;
+      readonly mint: string;
+      readonly total: string;
+      readonly unclaimed: string;
+    };
+  };
+  readonly authority: {
+    readonly feeClaimer: string;
+  };
+  readonly observedAt: string;
+  readonly poolAddress: string;
+}
+
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
@@ -129,6 +153,84 @@ export class MeteoraDbcAdapter {
 
   async attestSpcxxQuoteRail(): Promise<MeteoraDbcObservation> {
     return this.attestQuoteRail(SPCXX_MINT);
+  }
+
+  /** Reads earned partner fees without building a claim or requesting a signature. */
+  async readPartnerTreasury(): Promise<MeteoraPartnerTreasuryObservation> {
+    if (this.#poolAddress === null) {
+      throw new IntegrationError(
+        "CONFIG_REQUIRED",
+        "A protected market pool is required for treasury reads.",
+        { retryable: false, status: 400 },
+      );
+    }
+
+    try {
+      const pool = await withTimeout(
+        this.#state.getPool(this.#poolAddress),
+        this.#timeoutMs,
+      );
+      if (pool === null) {
+        throw new IntegrationError(
+          "UPSTREAM_UNAVAILABLE",
+          "The protected Meteora pool could not be found.",
+          { retryable: true, status: 503 },
+        );
+      }
+      const configAddress = pool.poolState.config.toBase58();
+      const config = await withTimeout(
+        this.#state.getPoolConfig(configAddress),
+        this.#timeoutMs,
+      );
+      if (config === null) {
+        throw new IntegrationError(
+          "UPSTREAM_UNAVAILABLE",
+          "The protected Meteora configuration could not be found.",
+          { retryable: true, status: 503 },
+        );
+      }
+      const baseMint = pool.poolState.baseMint.toBase58();
+      const quoteMint = config.quoteMint.toBase58();
+      const [fees, base, quote] = await withTimeout(
+        Promise.all([
+          this.#state.getPoolFeeBreakdown(this.#poolAddress),
+          this.#mintReader.getMint(baseMint),
+          this.#mintReader.getMint(quoteMint),
+        ]),
+        this.#timeoutMs,
+      );
+
+      return Object.freeze({
+        assets: Object.freeze({
+          base: Object.freeze({
+            claimed: fees.partner.claimedBaseFee.toString(),
+            decimals: base.instrument.decimals,
+            mint: baseMint,
+            total: fees.partner.totalBaseFee.toString(),
+            unclaimed: fees.partner.unclaimedBaseFee.toString(),
+          }),
+          quote: Object.freeze({
+            claimed: fees.partner.claimedQuoteFee.toString(),
+            decimals: quote.instrument.decimals,
+            mint: quoteMint,
+            total: fees.partner.totalQuoteFee.toString(),
+            unclaimed: fees.partner.unclaimedQuoteFee.toString(),
+          }),
+        }),
+        authority: Object.freeze({
+          feeClaimer: config.feeClaimer.toBase58(),
+        }),
+        observedAt: this.#now().toISOString(),
+        poolAddress: this.#poolAddress,
+      });
+    } catch (error) {
+      if (error instanceof IntegrationError) throw error;
+      throw new IntegrationError(
+        "UPSTREAM_UNAVAILABLE",
+        "Meteora partner fees could not be read from the configured RPC.",
+        { retryable: true, status: 503 },
+      );
+    }
   }
 
   async attestQuoteRail(quoteMintAddress: string): Promise<MeteoraDbcObservation> {
