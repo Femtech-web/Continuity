@@ -1,13 +1,44 @@
 # Continuity
 
-Lifecycle safety for stock-quoted markets on Solana.
+Protected agent markets that keep following their stock quote.
 
-Continuity detects when a tokenized stock is retiring or being replaced, stops
-Continuity-managed automation from relying on the obsolete token, and prepares
-a reviewed successor market that an authorized wallet can approve on Solana.
+Continuity is a launch, protection, and treasury platform for AI-agent tokens
+that trade against tokenized stocks on Solana. An operator connects a wallet,
+selects a ClawPump agent they control, defines that agent's token, and chooses a
+verified PreStocks stock token as the asset buyers will pay with. Continuity
+checks the exact stock mint and issuer lifecycle, prepares a stock-aware Meteora
+market, simulates the complete transaction, and asks the operator's wallet for
+the only signature that can launch it.
 
-It does not control PreStocks instruments, freeze third-party pools, or move
-funds without a wallet signature.
+The product does not stop at launch. Every confirmed market is registered under
+**Protected markets**, where Continuity Sentinel continues checking the stock
+token, Meteora configuration, bonding-curve progress, fees, reserves, and later
+migration. If the stock token is retired or replaced, Continuity stops its own
+managed automation from deepening the obsolete market, explains why, and helps
+the operator prepare a separately reviewed successor market. It cannot rewrite
+or freeze the old pool.
+
+Each protected market also has an **Agent treasury**. Continuity verifies that
+the bound ClawPump agent is the market's real onchain fee authority and shows
+the partner fees Meteora has recorded for it, separately from trader liquidity
+and the human operator's wallet. Reading those fees is live. Claiming, swapping,
+and depositing them into a lending vault remain deliberately locked until the
+exact agent wallet has a supported, reviewable signing route.
+
+Public users can inspect stock lifecycles and protected markets without a
+wallet. Operators use the five-step launch flow. ClawPump agents can run the
+same safety policy through the Continuity skill or paid x402 service, while
+Claude, Codex, and other applications can use the read-only MCP/API. None of
+those agent interfaces receives unrestricted signing authority.
+
+In one line:
+
+```text
+owned ClawPump agent + new agent token + verified stock quote
+  → wallet-approved Meteora market
+  → continuous Sentinel protection
+  → verified agent-fee treasury
+```
 
 **Start here:** [`docs/product-flow.md`](docs/product-flow.md) explains the
 complete product in plain language: who uses it, where each token comes from,
@@ -21,8 +52,8 @@ External MCP, ClawPump skill, and x402 verification is documented in
 
 ## Contents
 
-1. [Beginner glossary](#beginner-glossary)
-2. [Understand the product in five objects](#understand-the-product-in-five-objects)
+1. [What Continuity is](#what-continuity-is)
+2. [One protected market from start to finish](#one-protected-market-from-start-to-finish)
 3. [What Meteora DBC means](#what-meteora-dbc-means)
 4. [The complete SpaceX example](#the-complete-spacex-example)
 5. [What happens after a launch](#what-happens-after-a-launch)
@@ -38,96 +69,108 @@ External MCP, ClawPump skill, and x402 verification is documented in
 15. [Run, configure, and verify](#run-locally)
 16. [Agent treasury](#agent-treasury)
 
-## Beginner glossary
+## What Continuity is
 
-- **Mint** — the unique Solana address that identifies one exact type of token.
-  Two tokens can have similar names but different mint addresses.
-- **Quote token** — the token a buyer pays with. In `CONT/SPCXx`, the buyer pays
-  with `SPCXx` to receive `CONT`.
-- **Meteora DBC** — Meteora's automated launch market. It creates the new token,
-  starts its market, and changes its price according to preset rules as people
-  buy and sell.
-- **Pool** — the onchain market account that holds the trading rules and token
-  balances.
-- **DBC badge** — an onchain permission mark Meteora requires before some
-  Token-2022 tokens can be used as payment tokens in DBC. It is not a logo or a
-  badge Continuity can draw on the website.
-- **Transfer fee** — a fee a token automatically removes whenever it moves
-  between wallets. The current DBC launch route cannot safely use the seven
-  affected PreStocks mints as quote tokens.
-- **Graduation** — the point where a successful launch leaves the opening
-  bonding curve and its liquidity moves into a regular Meteora DAMM v2 pool.
+Continuity serves one connected lifecycle rather than a collection of unrelated
+tools:
 
-## Understand the product in five objects
+| Product surface | What a person or agent accomplishes there |
+| --- | --- |
+| **Markets** | Browse the complete current PreStocks catalog, see which instruments are current or retiring, inspect exact source evidence, and open every market launched through Continuity. No wallet is required. |
+| **Launch** | Pair an owned ClawPump agent and its new token with an eligible stock quote, review the bounded Meteora design, run a live Solana simulation, and explicitly approve the transaction in the operator wallet. |
+| **Protected markets** | Open the live trade route, pool account, launch transaction, curve progress, and latest Sentinel result for each confirmed market. |
+| **Activity** | Review automatic and on-demand lifecycle checks, deterministic verdicts, evidence hashes, receipts, and alerts. |
+| **Treasury** | See the real Meteora partner fees assigned to each market's agent and verify that the agent—not Continuity or the operator—is the fee authority. |
+| **Skill, x402, and MCP/API** | Let ClawPump agents and external applications request the same source-backed decision without receiving wallet custody or permission to launch. |
 
-### 1. Stock instrument
+This makes Continuity different from a generic token launcher and from a stock
+directory. The protected market is the product: verified before creation,
+observable while it trades, monitored after launch, and connected to the
+revenue of the agent responsible for it.
 
-A stock instrument is one exact token mint representing an asset. `SPACEX` and
-`SPCXx` are different Solana tokens even though both relate to SpaceX.
+## One protected market from start to finish
 
-PreStocks announced that `SPACEX` will expire and identified `SPCXx` as its
-successor. Continuity preserves that source evidence and binds the two exact
-mint addresses into a machine-readable lifecycle manifest.
+### 1. Choose the agent and define its token
 
-Source: [PreStocks SpaceX lifecycle notice](https://prestocks.com/spacex)
-
-### 2. Base token
-
-The base token is the token being launched. In the reference implementation it
-is `CONT`, the token associated with the Continuity Sentinel agent and its
-protection service.
+The operator connects a Solana wallet and either selects a ClawPump agent they
+control or creates one through Continuity. They then define the new token for
+that agent or service. In the reference market, the agent is **Continuity
+Sentinel** and the token is `CONT`.
 
 `CONT` now exists on Solana at
 [`Hae9…epua`](https://solscan.io/token/Hae9BEytCMNaFbdZ8eGnjqsBgG6VzhJqGRtNotkzepua).
-Its name and ticker are Continuity product choices. The confirmed reference
-transaction created its mint together with the initial Meteora market.
-PreStocks, ClawPump, Meteora, and Pyth do not issue `CONT`.
+Its name and ticker are Continuity product choices; PreStocks, ClawPump,
+Meteora, and Pyth did not issue it.
 
-### 3. Stock-quoted market
+### 2. Choose the stock people will pay with
 
-A market such as `CONT/SPCXx` lets buyers exchange the stock token `SPCXx` for
-the base token `CONT`, and vice versa. Meteora's onchain programs operate the
-automated pricing and liquidity rules instead of a traditional order-book
-operator manually matching every buyer and seller.
+The operator chooses an eligible PreStocks token as the quote asset. In
+`CONT/SPCXx`, a buyer pays with `SPCXx` to receive `CONT`. Continuity verifies
+the exact mint rather than trusting a ticker, checks the issuer lifecycle,
+transfer behavior, Meteora compatibility, executable route, and independent
+market reference.
 
-Continuity reviews and prepares the market. A wallet-approved transaction calls
-Meteora DBC on Solana to create it. After confirmation, the market exists on
-Meteora; it is not merely a page inside Continuity.
+This matters because `SPACEX` and `SPCXx` are different Solana tokens even
+though both represent SpaceX exposure. PreStocks announced that `SPACEX` will
+expire and named `SPCXx` as its successor. Continuity preserves that source and
+the two exact mint addresses in a machine-readable lifecycle manifest.
 
-### 4. Market operator
+Source: [PreStocks SpaceX lifecycle notice](https://prestocks.com/spacex)
 
-The market operator is the person or organization whose wallet owns the launch
-decision, pays the Solana transaction costs, and signs the final transaction.
-Like a permissionless launchpad, any visitor may become an operator: they
-connect a Solana wallet and sign a one-time, non-transaction login message.
-Continuity then creates a server session and stores that wallet as the owner of
-its ClawPump-agent mappings, launch drafts, and preflight records in Supabase.
+### 3. Review and create the market
 
-That authentication does not grant custody and does not sign a launch. It only
-proves who may manage an offchain draft. The eventual Meteora transaction still
-requires a separate, explicit wallet signature. Public visitors can inspect the
-registry, evidence, and replay without connecting.
+Continuity turns the selected agent, new token, and verified stock quote into a
+bounded Meteora DBC configuration. The operator reviews the pricing and fee
+policy in product language. Continuity then builds the exact Solana
+instructions, lists the accounts that will be created or changed, checks both
+wallets, and simulates the transaction.
 
-The `CONT/SPCXx` reference launch remains a locked first-party template. The
-human wallet in `CONT_OPERATOR_WALLET` is its only permitted operator. This is
-the project owner's normal Solana wallet—not the Continuity Sentinel agent
-wallet. The custom path lets any authenticated operator create or select a ClawPump agent,
-define a different new token, and use a separately verified stock quote. An
-operator never receives authority over `CONT`, another wallet's agent, or
-another wallet's draft.
+Only after every required check passes does the operator's wallet receive the
+final approval request. A successful signature creates the new token and its
+first stock-quoted market through Meteora's programs on Solana. The market is
+not hosted inside Continuity; Continuity registers and protects the onchain
+result.
 
-### 5. Sentinel
+### 4. Keep Sentinel attached after launch
 
-Sentinel is Continuity's deterministic safety service. It evaluates exact token
-identities, issuer evidence, market configuration, price references, wallet
-prerequisites, and Solana simulation results before an operator can proceed. It
-then keeps checking the same stock quote, DBC configuration, curve, reserves,
-fees, and migration state after the market launches. Pre-launch verification
-and post-launch protection are one continuous product loop.
+Sentinel keeps checking the same stock mint, issuer lifecycle, DBC
+configuration, curve progress, fees, reserves, and migration state. The market
+appears under **Protected markets** with Trade, Pool, and Launch links. Activity
+stores the matching evidence and decision history.
 
-ClawPump hosts the Continuity Sentinel agent and its paid scan surface. The
-language model may coordinate the workflow, but it cannot invent a successor
-mint, conversion ratio, deadline, or safety verdict.
+If the stock later retires, Sentinel stops Continuity-managed actions and
+removes Continuity's Trade action. It does not seize user funds or modify the
+old pool. Instead, it preserves the reason and prepares a separately reviewed
+successor market for operator approval.
+
+### 5. Track the agent's market revenue
+
+Meteora can record part of the trading fees for the ClawPump agent configured
+as the market partner. **Treasury** reads those fees directly from the pool,
+checks that the registered agent is the real fee authority, and shows the SOL
+the agent keeps for operating costs.
+
+The treasury is currently read-only. Displayed claimable fees are real onchain
+accounting, but they have not entered the agent wallet and are not yield.
+Claiming and vault deposits remain locked until the exact ClawPump agent can
+review and sign the required transaction through a supported public route.
+
+### 6. Reuse the decision outside the website
+
+The same lifecycle and market decision is available through the Continuity
+ClawPump skill, a paid x402 service, and read-only MCP/API tools. This lets an
+agent check a market before acting or sell a verified scan to another agent.
+Payment buys the answer, never transaction authority.
+
+### Terms used below
+
+- A **mint** is the unique Solana address for one exact token.
+- The **base token** is the new agent token being launched, such as `CONT`.
+- The **quote token** is what buyers pay with, such as `SPCXx`.
+- A **pool** is the onchain market account holding the pricing and liquidity
+  rules.
+- **Graduation** is when a successful opening curve migrates into a regular
+  Meteora DAMM v2 liquidity pool.
 
 ## What Meteora DBC means
 
