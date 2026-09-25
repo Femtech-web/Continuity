@@ -7,7 +7,7 @@ export const protectedMarketDraftSchema = z.object({
   quoteSymbol: z.literal("SPCXx"),
   tokenDescription: z.string().trim().min(20).max(500),
   tokenImageUrl: z.string().url().optional().nullable(),
-  tokenName: z.string().trim().min(2).max(48),
+  tokenName: z.string().trim().min(2).max(32),
   tokenSymbol: z.string().trim().regex(/^[A-Z0-9]{2,10}$/),
 });
 

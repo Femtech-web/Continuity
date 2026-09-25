@@ -2590,6 +2590,13 @@
 
 .preflightFooter code { color: var(--muted); font-size: 12px; }
 
+.preflightFooterActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+}
+
 .panelHeader {
   display: flex;
   align-items: center;
@@ -3955,6 +3962,11 @@
   .preflightFooter > div:first-child,
   .launchApprovalAction { align-items: flex-start; flex-direction: column; }
   .preflightError { display: flex; }
+  .preflightFooterActions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
   .authorityRoute,
   .preflightSkeleton { grid-template-columns: 1fr; }
   .authorityRoute > div { min-height: auto; border-right: 0; border-bottom: 1px solid rgba(18, 31, 27, 0.09); }

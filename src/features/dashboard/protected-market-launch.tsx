@@ -743,6 +743,7 @@ export function ProtectedMarketLaunch({ experience }: ProtectedMarketLaunchProps
                     <label htmlFor="token-name">Token name</label>
                     <input
                       id="token-name"
+                      maxLength={32}
                       onChange={(event) => {
                         setTokenName(event.target.value);
                         invalidateDraft();

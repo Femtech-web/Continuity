@@ -158,6 +158,23 @@ If the quote later becomes unsafe, Continuity removes the Trade action from its
 interface, stops Continuity-managed automation, records the reason, and alerts
 the operator. It cannot freeze, edit, or remove a third-party onchain pool.
 
+## Where an agent treasury fits later
+
+Meteora can record trading fees claimable by the ClawPump agent wallet bound to
+a protected market. Those fees are not the same as the liquidity traders use
+inside the pool.
+
+A future Agent Treasury can let that agent claim only its earned fees, retain a
+small operating reserve, and place a capped amount into an approved Solana
+lending vault. It must never move pool reserves, user deposits, or the human
+operator's assets. The first activation and deposit require operator approval;
+later automation remains limited by exact destinations, amount caps, receipts,
+and an automatic pause whenever Sentinel reports risk.
+
+This is a planned extension, not a live feature in the current submission. The
+complete proposed flow and controls are documented in
+[`research/agent-treasury.md`](research/agent-treasury.md).
+
 ## Why is only `SPCXx` launch-ready today?
 
 The public registry monitors all eight current PreStocks instruments. Registry

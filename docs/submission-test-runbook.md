@@ -20,9 +20,9 @@ METEORA_DBC_CONFIG_ADDRESS=GVmofTcACEyQEdPGTLqiXeZNYBiCEX8wcr7mAkgHSYc
 METEORA_DBC_POOL_ADDRESS=HSokfXowJKiSvDoQtR3oVTuvBJ7kneUqZVE9pypZCnib
 
 SOLANA_CLUSTER=mainnet-beta
-SOLANA_RPC_URL=https://YOUR_RELIABLE_MAINNET_RPC
+SOLANA_RPC_URL=https://solana-rpc.publicnode.com
 NEXT_PUBLIC_SOLANA_CLUSTER=mainnet
-NEXT_PUBLIC_SOLANA_RPC_URL=https://YOUR_BROWSER_SAFE_MAINNET_RPC
+NEXT_PUBLIC_SOLANA_RPC_URL=https://solana-rpc.publicnode.com
 NEXT_PUBLIC_SITE_URL=https://continuity-alpha-rouge.vercel.app
 ```
 
@@ -36,6 +36,14 @@ CONT_TOKEN_METADATA_URI=https://continuity-alpha-rouge.vercel.app/token/cont.jso
 
 `JUPITER_API_KEY` is optional. The app uses Jupiter's public Lite API when it is
 absent. Never prefix a secret with `NEXT_PUBLIC_`.
+
+The copyable RPC above is PublicNode's current public Solana mainnet endpoint.
+It was verified for RPC health, a fresh confirmed blockhash, and browser CORS
+from the deployed Continuity origin on 25 September 2026. It is suitable for
+the submission demo without creating another account. A public endpoint still
+has no private service-level agreement; after submission, replace the
+server-side URL with a dedicated provider endpoint and use an origin-restricted
+browser key for `NEXT_PUBLIC_SOLANA_RPC_URL`.
 
 ## 1. Production product smoke test
 

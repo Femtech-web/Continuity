@@ -1,4 +1,5 @@
 import { assertSameOrigin, requireOperatorSession } from "@/auth/operator-session";
+import { buildProtectedMarketMetadataUri } from "@/domain/continuity/token-metadata";
 import { IntegrationError, integrationErrorResponse } from "@/integrations/integration-error";
 import {
   findOperatorAgent,
@@ -55,10 +56,7 @@ export async function POST(
       });
     }
 
-    const metadataUri = new URL(
-      `/api/v1/protected-market-drafts/${draft.id}/metadata`,
-      request.url,
-    ).toString();
+    const metadataUri = buildProtectedMarketMetadataUri(request.url, draft.id);
     const plan = await buildProtectedMarketLaunchPlan({
       agent,
       authority,

@@ -17,7 +17,24 @@ do after launch, and which boundaries remain. For final verification, use
 mainnet proof is indexed in
 [`docs/mainnet-transaction-evidence.md`](docs/mainnet-transaction-evidence.md).
 
-### Beginner glossary
+## Contents
+
+1. [Beginner glossary](#beginner-glossary)
+2. [Understand the product in five objects](#understand-the-product-in-five-objects)
+3. [What Meteora DBC means](#what-meteora-dbc-means)
+4. [The complete SpaceX example](#the-complete-spacex-example)
+5. [What happens after a launch](#what-happens-after-a-launch)
+6. [Why launch CONT/SPCXx](#why-launch-contspcxx-at-all)
+7. [How automatic monitoring works](#how-automatic-monitoring-works)
+8. [Why only SPCXx can launch today](#why-only-spcxx-can-launch-today)
+9. [Product paths](#product-paths)
+10. [What is live and what remains](#what-the-current-build-can-do)
+11. [Confirmed mainnet proof](#confirmed-mainnet-proof)
+12. [Roles and authority](#product-roles-and-authority)
+13. [Run, configure, and verify](#run-locally)
+14. [Future agent treasury](#future-agent-treasury)
+
+## Beginner glossary
 
 - **Mint** — the unique Solana address that identifies one exact type of token.
   Two tokens can have similar names but different mint addresses.
@@ -108,6 +125,29 @@ ClawPump hosts the Continuity Sentinel agent and its paid scan surface. The
 language model may coordinate the workflow, but it cannot invent a successor
 mint, conversion ratio, deadline, or safety verdict.
 
+## What Meteora DBC means
+
+DBC means **Dynamic Bonding Curve**. In plain terms, it is the launch engine
+that creates the new agent token and opens its first automatic market on
+Solana.
+
+At the beginning there is no traditional order book waiting for one buyer and
+one seller to match. Meteora uses a reviewed pricing curve instead:
+
+1. a buyer pays with the chosen stock quote token;
+2. the curve calculates how much of the new agent token the buyer receives;
+3. the price changes as buying and selling change the pool's reserves;
+4. trading fees are recorded by Meteora; and
+5. when the reviewed quote-token target is reached, liquidity graduates into a
+   normal Meteora DAMM v2 pool.
+
+Continuity does not invent that market math or hold the pool's money. It checks
+the exact stock token, explains the settings, simulates the launch, requires a
+human wallet signature, records the resulting addresses, and watches the
+market afterwards. Meteora's
+[official DBC overview](https://docs.meteora.ag/overview/products/dbc/what-is-dbc)
+describes the underlying launch and graduation system.
+
 ## The complete SpaceX example
 
 1. `SPACEX` is an existing PreStocks token.
@@ -127,7 +167,7 @@ mint, conversion ratio, deadline, or safety verdict.
 10. Once confirmed, Continuity records the resulting Meteora configuration and
    pool addresses and begins post-launch monitoring.
 
-### What happens after a launch?
+## What happens after a launch?
 
 A confirmed launch is not the end of the product flow:
 
@@ -154,6 +194,30 @@ there is no live `CONT/SPACEX` pool. The real reference market is
 `CONT/SPCXx`: it was confirmed on Solana mainnet on 25 September 2026 and is
 registered for Sentinel monitoring. The replay explains the rollover problem;
 the live market proves the protected successor path.
+
+## How automatic monitoring works
+
+Monitoring is automatic after a protected market is registered:
+
+1. Vercel calls Continuity's protected scheduler once per day on the current
+   free deployment plan.
+2. Continuity refreshes the issuer lifecycle record and loops through every
+   registered protected market.
+3. For each market it reads the expected quote mint and current Meteora pool
+   state, then runs the same deterministic safety rules used before launch.
+4. The result, evidence hash, market snapshot, and any alert are stored in
+   Supabase.
+5. **Markets** shows the latest protection state, while **Activity** keeps the
+   append-only run history.
+
+The **Check now** action and the protected API endpoint only request an extra
+immediate run; they do not replace the schedule. No wallet is signed and no
+funds move during a monitoring check.
+
+ClawPump automations are an additional agent-facing path. They can ask for the
+same Continuity verdict on their own schedule and explain it to an operator or
+paid x402 customer. The core market monitor still runs even when nobody opens
+the website and even when a ClawPump chat is idle.
 
 ## Why launch `CONT/SPCXx` at all?
 
@@ -550,7 +614,7 @@ Execution is disabled by default in the sense that public reads, scans, drafts,
 and simulations never sign. Only the final explicit wallet approval sends the
 reviewed transaction.
 
-### Current stock-quote support
+## Why only `SPCXx` can launch today
 
 Continuity monitors the complete eight-asset PreStocks catalog, but monitoring
 does not imply that every mint can be used as a Meteora DBC quote token. The
@@ -572,6 +636,82 @@ This is a Meteora compatibility boundary, not a UI whitelist. When a mint gains
 compatible DBC support, Continuity must add its price-reference adapter and the
 mint must pass the same live identity, lifecycle, badge, transfer-policy,
 route, and price-reference audit before launch approval is enabled.
+
+### What is a transfer fee?
+
+A normal token transfer moves the full amount from one account to another. A
+token with a transfer fee automatically removes a small portion during that
+move. For example, sending 100 units with a 1% transfer fee can deliver only 99
+units to the destination.
+
+That difference matters inside an automated market: the market must calculate
+prices and reserves using the amount it actually receives, not the amount the
+sender requested. The seven other live PreStocks mints use transfer-fee
+behavior that the current Meteora DBC quote-token route does not safely accept,
+and they do not currently have the required Meteora token badge. Continuity
+therefore monitors them but refuses to advertise a launch that the reviewed
+route cannot complete correctly.
+
+## Future agent treasury
+
+The product has a credible next step: let the ClawPump agent attached to a
+protected market put **its own earned fees** to work between operating costs.
+This is not live in the current submission and it is not a vault for user
+deposits.
+
+Continuity attaches one selected ClawPump agent to each protected-market
+record. The current workflow can reuse an owned agent, but a dedicated agent per
+market is the recommended treasury setup because its wallet, earnings, limits,
+and receipts remain easy to separate and audit.
+
+The safe design is:
+
+```text
+Meteora records claimable partner fees
+  → the market's ClawPump agent claims only those earned fees
+  → a fixed reserve stays liquid for monitoring and transactions
+  → an approved, capped amount may be converted to a supported asset
+  → that amount may be supplied to an allowlisted Solana lending vault
+  → every claim, swap, deposit, withdrawal, and yield snapshot is recorded
+```
+
+For the current DBC preset, curve-phase partner fees are collected in the quote
+token and the selected ClawPump agent wallet is the onchain `feeClaimer`.
+Meteora documents that the fee claimer can claim partner trading fees; the
+official program also separates claimable fees from pool reserves. ClawPump
+already provides agent wallets, destination whitelists, scheduled automations,
+spend limits, swaps, and describes Jupiter lending support. Jupiter Lend can
+earn yield on supported supplied assets.
+
+Before this becomes executable, Continuity must add a reviewed treasury policy:
+
+- use only claimed partner fees or paid-service revenue—never user balances or
+  market liquidity;
+- never borrow or use leverage;
+- keep a minimum SOL operating reserve;
+- allowlist the exact lending program and receiving accounts;
+- cap each conversion and deposit, plus a daily maximum;
+- require explicit operator approval for activation and the first deposit;
+- pause automatically when Sentinel marks the quote or market unsafe; and
+- store receipts so the operator can account for every movement.
+
+It must also verify a documented ClawPump path that lets the bound agent wallet
+sign the Meteora claim and lending transactions without exporting the agent's
+private key. The current Partner API adapter creates and verifies agents but
+does not yet prove that arbitrary transaction-signing path.
+
+The fastest credible first integration is a USDC/SOL lending deposit after fees
+are claimed and, where necessary, deliberately swapped. Directly depositing
+`SPCXx` should not be promised unless the chosen lending vault explicitly
+supports that exact mint. Full implementation is deliberately after the
+submission-critical MCP, ClawPump-skill, x402, second-launch, and monitoring
+proofs are complete.
+
+Primary references: [Meteora DBC program](https://github.com/MeteoraAg/dynamic-bonding-curve),
+[ClawPump documentation](https://clawpump.tech/docs), and
+[Jupiter Lend](https://jup.ag/lend/earn).
+The implementation phases and trust boundaries are specified in
+[`docs/research/agent-treasury.md`](docs/research/agent-treasury.md).
 
 ## Verification
 

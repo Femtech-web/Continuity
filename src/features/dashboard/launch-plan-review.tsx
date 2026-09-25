@@ -353,17 +353,28 @@ export function LaunchPlanReview({
                 {state.plan.simulation.unitsConsumed?.toLocaleString() ?? "—"} compute units
               </code>
             </div>
-            <div className={styles.signingDisabled}>
-              <span>
-                <strong>
+            <div className={styles.preflightFooterActions}>
+              <div className={styles.signingDisabled}>
+                <span>
+                  <strong>
+                    {state.plan.approval.enabled
+                      ? "Simulation passed"
+                      : "Wallet approval unavailable"}
+                  </strong>
                   {state.plan.approval.enabled
-                    ? "Simulation passed"
-                    : "Wallet approval unavailable"}
-                </strong>
-                {state.plan.approval.enabled
-                  ? "Continue to review the exact launch and approve it in your wallet."
-                  : "No signature has been requested or submitted."}
-              </span>
+                    ? "Continue to review the exact launch and approve it in your wallet."
+                    : "No signature has been requested or submitted."}
+                </span>
+              </div>
+              {state.plan.simulation.state === "FAILED" ? (
+                <button
+                  className={styles.secondaryAction}
+                  onClick={() => void prepare()}
+                  type="button"
+                >
+                  Retry safety check
+                </button>
+              ) : null}
             </div>
           </div>
           {state.plan.simulation.state === "FAILED" ? (
