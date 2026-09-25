@@ -1,0 +1,29 @@
+Continuity Sentinel x402 discovery proof
+========================================
+
+Observed: 2026-09-25T18:28:05Z
+Request: unpaid POST with the CONT/SPCXx Sentinel scan prompt
+Endpoint: https://x402-gateway-production-2907.up.railway.app/v1/continuity-sentinel-58a43244
+HTTP status: 402 Payment Required
+Service status: active
+Readiness: ready
+Configured price: USD 0.10
+Configured settlement wallet: HknktYe69MFMHiP6wktLoYia4W85FGH5pYXBFFMWJTgk
+
+Safety finding
+--------------
+
+The response body labels payment_network as Solana mainnet, but the signed
+Payment-Required header quotes:
+
+- network: solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1 (Solana devnet)
+- asset: 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU (devnet USDC)
+- amount: 100000 raw units
+- signed resource URL scheme: http
+- public endpoint scheme: https
+
+Conclusion: endpoint deployment and unpaid payment discovery are verified.
+Paid settlement is intentionally blocked until ClawPump returns a consistent
+mainnet network, asset, and signed resource. No funds were spent in this test.
+
+Sensitive payment proofs and authorization material are intentionally omitted.

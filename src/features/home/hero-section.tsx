@@ -17,7 +17,9 @@ export function HeroSection() {
           <p className="hero__lede">
             Continuity verifies stock-token changes, helps operators launch agent
             markets with an eligible stock quote, and keeps checking those markets
-            after they go live. People and agents share the same source-backed answer.
+            after they go live. It tracks the agent&apos;s market fees and prepares a
+            guarded treasury path for putting those earnings to work. People and
+            agents share the same source-backed answer.
           </p>
           <div className="hero__actions">
             <Link className="button button--primary" href="/app">

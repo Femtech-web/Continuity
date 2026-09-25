@@ -73,6 +73,23 @@ select:not(:disabled),
   outline-offset: 4px;
 }
 
+.skip-link {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 1000;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--paper-bright);
+  font-size: 13px;
+  font-weight: 650;
+  transform: translateY(-160%);
+  transition: transform 160ms ease;
+}
+
+.skip-link:focus { transform: translateY(0); }
+
 .page-shell {
   margin-inline: auto;
   width: var(--shell);
@@ -174,6 +191,35 @@ select:not(:disabled),
 .site-header nav a:hover,
 .text-link:hover {
   color: var(--mint);
+}
+
+.site-header--light {
+  border-bottom-color: transparent;
+  color: var(--text);
+}
+
+.site-header--light nav,
+.site-header--light .header-demo-link {
+  color: var(--muted);
+}
+
+.site-header--light .header-action {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper-bright);
+}
+
+@media (hover: hover) {
+  .site-header--light nav a:hover,
+  .site-header--light .header-demo-link:hover {
+    color: #286d55;
+  }
+
+  .site-header--light .header-action:hover {
+    border-color: var(--ink-raised);
+    background: var(--ink-raised);
+    color: var(--paper-bright);
+  }
 }
 
 .header-action {

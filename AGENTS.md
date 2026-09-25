@@ -1,13 +1,20 @@
 # Continuity agent instructions
 
-Read `private-notes/README.md` before changing product behavior, architecture, integrations, economic design, or the demo.
+Read `README.md` and `docs/product-flow.md` before changing product behavior,
+architecture, integrations, economic design, or the demo. Use
+`docs/submission-test-runbook.md` for release verification and
+`docs/mainnet-transaction-evidence.md` for confirmed public-chain claims.
 
-- For product scope and claims, follow `private-notes/01-product-and-scope.md`.
-- For implementation boundaries and repository structure, follow `private-notes/03-architecture.md` and `private-notes/11-implementation-plan.md`.
-- For Solana transactions or programs, follow `private-notes/04-solana-build-guide.md` and `private-notes/08-security-and-trust.md`.
-- For action manifests, policies, decisions, or receipts, follow `private-notes/05-domain-model-and-contracts.md`, the JSON schemas, and `private-notes/06-agent-policy-and-lifecycle.md`.
-- For sponsor or hackathon claims, follow `private-notes/02-sponsor-and-competition.md` and `private-notes/13-demo-submission-and-evidence.md`.
-- Record architecture or product decisions in `private-notes/15-decisions-risks-and-open-questions.md`; keep each fact authoritative in one file and link to it elsewhere.
+- Keep product language traceable to an issuer source, live RPC read, database
+  record, or confirmed transaction.
+- Never describe simulated, pending, claimable, or unclaimed value as settled
+  wallet funds.
+- Keep operator authority, ClawPump agent authority, and public read access
+  separate.
+- Preserve fail-closed lifecycle, quote-mint, configuration, simulation, and
+  wallet-approval gates.
+- Keep user- and judge-facing documentation under `docs/`; do not commit local
+  working notes, secrets, generated evidence, or private keys.
 
 Financial actions default to preview or simulation. A transaction becomes executable only after deterministic policy checks and the configured approval mode pass.
 

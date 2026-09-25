@@ -20,7 +20,7 @@ export function TechnologySection() {
                 width={technology.width}
                 height={technology.height}
                 unoptimized={technology.logo.endsWith(".svg")}
-                style={{ height: "auto", width: technology.width }}
+                style={{ height: technology.height, width: technology.width }}
               />
               {technology.key === "clawpump" && <strong>ClawPump</strong>}
             </div>

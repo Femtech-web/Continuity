@@ -30,7 +30,36 @@ The scan was persisted with trigger `MCP`, verdict `LAUNCH_BLOCKED`, and action
 external client received the deterministic answer and proof without wallet
 authority.
 
-## Install and run the ClawPump skill
+## ClawPump skill proof — complete
+
+On 25 September 2026, the deployed **Continuity Sentinel** agent successfully
+used the installed skill from ClawPump Chat. It returned:
+
+- verdict: `LAUNCH_BLOCKED`;
+- reason codes: `CONFIG_HASH_MISMATCH` and `LIFECYCLE_REVIEW_REQUIRED`;
+- evidence hash: `a5071619…013818`;
+- record hash: `075dbddb…39e607`; and
+- next run: `2026-09-26T00:18:59.857Z`.
+
+Continuity's public run history contains the same complete hashes under run ID
+`418a803d-8916-4484-8a42-5c093c1d7351`, trigger `ON_DEMAND`, and durable
+storage scope `SUPABASE_DURABLE`. The screenshot is preserved at
+[`evidence/clawpump/01-sentinel-skill-run.png`](evidence/clawpump/01-sentinel-skill-run.png).
+The enabled custom-skill state is preserved at
+[`evidence/clawpump/00-custom-skill-enabled.png`](evidence/clawpump/00-custom-skill-enabled.png).
+
+`LAUNCH_BLOCKED` is a successful integration result: the agent reached
+Continuity and honestly returned the current safety decision. No transaction
+was created, signed, or submitted.
+
+The captured build reported `CONFIG_HASH_MISMATCH` whenever full post-launch
+configuration-hash decoding was unavailable. The subsequent policy correction
+separates absence of attestation from proof of a mismatch: future runs return
+`CONFIG_ATTESTATION_PENDING` and `MANUAL_REVIEW` unless a real mismatch is
+observed. The screenshot remains valid transport and persistence proof; it is
+not evidence that the live pool was corrupted.
+
+### Reproduce the skill run
 
 The skill source is [`../skills/continuity-sentinel/SKILL.md`](../skills/continuity-sentinel/SKILL.md).
 It tells the agent to fetch a fresh Continuity scan, return the exact verdict
@@ -67,7 +96,7 @@ ClawPump also exposes official custom-skill tools (`create_custom_skill`,
 used. The dashboard wording can change, but the saved skill, enabled state, and
 agent result are the evidence that matters.
 
-### Capture these screenshots
+### Additional screenshots for a demo
 
 1. ClawPump Skills page showing `Continuity Sentinel` enabled.
 2. The agent reply showing verdict, reason codes, evidence hash, record hash,
@@ -76,6 +105,34 @@ agent result are the evidence that matters.
 
 Do not include an API key, provider key, private key, session token, or full
 authorization header in any screenshot.
+
+## x402 Cloud Service proof — deployment and discovery complete
+
+The Continuity Sentinel Cloud Service is active at:
+
+```text
+https://x402-gateway-production-2907.up.railway.app/v1/continuity-sentinel-58a43244
+```
+
+Its configured price is `$0.10` per request. The active-service screen is
+preserved at
+[`evidence/clawpump/02-x402-cloud-service-active.png`](evidence/clawpump/02-x402-cloud-service-active.png).
+
+On 25 September 2026, an unpaid POST using the Continuity scan prompt returned
+the expected HTTP `402`. The JSON body identified the service as active and
+ready and named the configured settlement wallet. This proves endpoint
+deployment, request-schema validation, and payment discovery without spending
+funds.
+
+The same response also exposed a settlement mismatch that blocks the paid
+test. Its service metadata labels the payment network as Solana mainnet, while
+the signed `Payment-Required` header asks for network
+`solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1` and asset
+`4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU`—Solana devnet and devnet USDC.
+The signed resource URL also uses `http://` while the public endpoint is HTTPS.
+Continuity will not authorize payment until ClawPump returns one internally
+consistent mainnet quote. The redacted discovery record is at
+[`evidence/clawpump/03-x402-discovery.txt`](evidence/clawpump/03-x402-discovery.txt).
 
 ## Publish and test the paid x402 service
 
@@ -90,7 +147,8 @@ handshake succeeds.
 3. Connect the settlement wallet requested by ClawPump.
 4. Confirm the agent has an active model/provider connection.
 5. Turn **Service active** on.
-6. Set the lowest practical test price, for example `$0.01` per request.
+6. Set the lowest practical test price. The verified deployment currently uses
+   `$0.10` per request.
 7. Use this description:
 
 ```text
@@ -117,6 +175,10 @@ curl -i -X POST 'PASTE_X402_ENDPOINT_HERE' \
 The unpaid request should return HTTP `402` with the amount, token, network,
 and payment destination. This proves that the service is protected, but it does
 not prove a payment completed.
+
+Before paying, compare the signed `Payment-Required` network and asset with the
+Cloud Service's displayed settlement network. Stop if one says mainnet and the
+other says devnet, as the verified 25 September response currently does.
 
 ### Complete one paid call
 

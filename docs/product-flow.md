@@ -273,6 +273,8 @@ Launch page.
 - a dedicated read-only Treasury workspace for claimable agent fees and SOL
   operating reserves;
 - read-only HTTP, MCP, skill, scheduled-run, and x402 service code.
+- a live ClawPump x402 Cloud Service whose unpaid payment-discovery handshake
+  has been verified.
 
 ### Replay used for explanation
 
@@ -292,12 +294,14 @@ claim to rewrite the old pool.
 
 ### Final submission proof still to run
 
-The second `ORBIT/SPCXx` market and external MCP client test are complete. The
-remaining submission evidence is operational:
+The second `ORBIT/SPCXx` market, external MCP client test, and interactive
+ClawPump Sentinel skill run are complete. The remaining submission evidence is
+operational:
 
-1. install and run the Sentinel skill in ClawPump;
-2. trigger its scheduled agent automation once; and
-3. complete one paid x402 request.
+1. trigger the ClawPump scheduled agent automation once, if that runtime is
+   included in the final demonstration; and
+2. resolve the ClawPump gateway's mainnet/devnet settlement mismatch, then
+   complete one paid x402 request.
 
 The exact sequence and expected evidence are in
 [`submission-test-runbook.md`](submission-test-runbook.md). Mainnet signatures

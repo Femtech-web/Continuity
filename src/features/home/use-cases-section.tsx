@@ -34,9 +34,9 @@ const paths = [
   },
   {
     audience: "Agent owners",
-    description: "See claimable Meteora fees and the SOL each market agent keeps for operations, without mixing in pool liquidity.",
+    description: "Track verified market fees now, then move them into guarded yield vaults once agent-authorized claims and withdrawals are live.",
     icon: "wallet",
-    title: "Track agent revenue",
+    title: "Grow the agent treasury",
   },
 ] as const satisfies readonly {
   audience: string;

@@ -2,7 +2,7 @@ import styles from "@/features/dashboard/dashboard-loading.module.css";
 
 export default function DashboardLoading() {
   return (
-    <main className={styles.shell} aria-busy="true" aria-label="Loading quote-rail monitor">
+    <main className={styles.shell} aria-busy="true" aria-label="Loading quote-rail monitor" id="main" tabIndex={-1}>
       <aside className={styles.sidebar}>
         <div className={styles.brand} />
         <div className={styles.navSkeleton}>

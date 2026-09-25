@@ -7,6 +7,7 @@ import type { DbcAttestationState } from "./dbc-attestation.ts";
 
 export type SentinelRunTrigger =
   | "MCP"
+  | "CLAWPUMP_SKILL"
   | "CLAWPUMP_X402"
   | "ON_DEMAND"
   | "SCHEDULED";

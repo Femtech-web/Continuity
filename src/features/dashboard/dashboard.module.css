@@ -2953,6 +2953,41 @@
 .ledgerRow time,
 .ledgerRow code { color: var(--muted); font-size: 12px; }
 
+.ledgerPagination {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 10px;
+}
+
+.ledgerPagination p,
+.ledgerPagination span {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ledgerPagination > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ledgerPagination button {
+  min-height: 34px;
+  padding-inline: 11px;
+  border: 1px solid rgba(18, 31, 27, 0.12);
+  border-radius: 8px;
+  background: rgba(250, 248, 242, 0.8);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.ledgerPagination button:disabled { cursor: default; opacity: 0.42; }
+
 .agentRunSummary {
   display: grid;
   grid-template-columns: minmax(240px, 1fr) minmax(430px, 1.25fr) auto;
@@ -4124,6 +4159,8 @@
   .ledgerRow strong { grid-column: 1 / -1; }
   .ledgerRow code { text-align: right; }
   .agentRunGrid { grid-template-columns: 1fr auto; }
+  .ledgerPagination { align-items: flex-start; flex-direction: column; }
+  .ledgerPagination > div { width: 100%; justify-content: space-between; }
   .registeredMarketHeader { display: none; }
   .registeredMarketRow {
     grid-template-columns: 1fr auto;

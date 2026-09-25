@@ -25,6 +25,12 @@ and the human operator's wallet. Reading those fees is live. Claiming, swapping,
 and depositing them into a lending vault remain deliberately locked until the
 exact agent wallet has a supported, reviewable signing route.
 
+This is already producing real mainnet protocol revenue. The confirmed
+`CONT/SPCXx` pool currently reports `308,601` raw fee units, equal to
+`0.00308601 SPCXx`, as claimable partner fees for its bound agent. That value is
+live Meteora accounting—not fixture data—but it remains unclaimed. It is not
+yet wallet cash, guaranteed fiat value, or lending yield.
+
 Public users can inspect stock lifecycles and protected markets without a
 wallet. Operators use the five-step launch flow. ClawPump agents can run the
 same safety policy through the Continuity skill or paid x402 service, while
@@ -48,26 +54,26 @@ do after launch, and which boundaries remain. For final verification, use
 mainnet proof is indexed in
 [`docs/mainnet-transaction-evidence.md`](docs/mainnet-transaction-evidence.md).
 External MCP, ClawPump skill, and x402 verification is documented in
-[`docs/external-agent-access.md`](docs/external-agent-access.md).
+[`docs/external-agent-access.md`](docs/external-agent-access.md). The website
+also includes a concise, single-page guide at `/docs`; the view-only submission
+walkthrough is [`docs/demo-video-script.md`](docs/demo-video-script.md).
 
 ## Contents
 
-1. [What Continuity is](#what-continuity-is)
-2. [One protected market from start to finish](#one-protected-market-from-start-to-finish)
-3. [What Meteora DBC means](#what-meteora-dbc-means)
-4. [The complete SpaceX example](#the-complete-spacex-example)
-5. [What happens after a launch](#what-happens-after-a-launch)
-6. [Why launch CONT/SPCXx](#why-launch-contspcxx-at-all)
-7. [How automatic monitoring works](#how-automatic-monitoring-works)
-8. [Why only SPCXx can launch today](#why-only-spcxx-can-launch-today)
-9. [Product paths](#product-paths)
-10. [What is live today](#what-the-current-build-can-do)
-11. [What is not live yet](#what-is-not-live-yet)
-12. [Roadmap](#roadmap)
-13. [Confirmed mainnet proof](#confirmed-mainnet-proof)
-14. [Roles and authority](#product-roles-and-authority)
-15. [Run, configure, and verify](#run-locally)
-16. [Agent treasury](#agent-treasury)
+- **Understand the product:** [what Continuity is](#what-continuity-is),
+  [one market from start to finish](#one-protected-market-from-start-to-finish),
+  [Meteora DBC in plain language](#what-meteora-dbc-means), and
+  [what happens after launch](#what-happens-after-a-launch).
+- **Inspect the proof:** [what works today](#what-the-current-build-can-do),
+  [confirmed mainnet transactions](#confirmed-mainnet-proof), and
+  [what is not live yet](#what-is-not-live-yet).
+- **Understand trust and ownership:** [persistence](#persistence-and-ownership),
+  [roles and authority](#product-roles-and-authority), and
+  [source architecture](#source-architecture).
+- **Run and integrate:** [local setup](#run-locally),
+  [agent access](#agent-access), [environment](#production-environment-variables),
+  [quote eligibility](#why-only-spcxx-can-launch-today),
+  [agent treasury](#agent-treasury), and [verification](#verification).
 
 ## What Continuity is
 
@@ -448,23 +454,28 @@ Read a registered Meteora market
 
 ## What is not live yet
 
-Continuity is deliberately explicit about the boundary between a working read,
-a working transaction, and a planned action. The application does not present
-planned treasury or rollover work as complete.
+The remaining work is intentionally narrow and visible:
 
-| Capability | Current truth | What is still required |
-| --- | --- | --- |
-| Protected-market launch | Live. Two separate mainnet launches created `CONT/SPCXx` and `ORBIT/SPCXx`. | Broader DBC presets can be added after they receive the same simulation and policy coverage. |
-| Post-launch monitoring | Live. Registered markets are scanned on demand and by the production scheduler. | A paid scheduler or external keeper can increase cadence beyond the hosting plan's daily cron limit. |
-| MCP access | Live and independently verified in MCP Inspector. | No launch authority is intentionally exposed through MCP. |
-| ClawPump skill | Implemented, but the first dashboard test exposed a GET/POST mismatch. The route and skill are corrected in this build. | Redeploy, update the saved ClawPump skill, and capture one successful agent reply plus its matching Activity record. |
-| Paid x402 scan | Endpoint and buyer instructions are implemented. | Complete one real paid request and retain the seller receipt or settlement signature. |
-| Stock coverage | All eight current PreStocks instruments are monitored. | Only exact `SPCXx` is launch-enabled; every additional quote mint still needs compatible Meteora support and the same live checks. |
-| Fee visibility | Live. Continuity can read real, claimable Meteora partner fees attributed to the bound agent. | The fee is not in the agent wallet until that exact agent signs a claim transaction. |
-| Fee claim | Not live. There is intentionally no Claim button. | ClawPump must expose a supported bounded Meteora-claim action or reviewed transaction-signing route for the agent wallet. |
-| Treasury yield | Not live. Nothing is automatically swapped or deposited. | Claiming, limits, reserve policy, one allowlisted vault, withdrawal testing, reconciliation, and receipts must all ship first. |
-| DBC graduation | The live markets are still on their opening curves. | Meteora creates the DAMM v2 destination only when a curve reaches its configured threshold; Continuity will record the real address then. |
-| Same-token rollover | Not live. Continuity cannot edit an old pool, and the current DBC creation path creates a new base token. | A separately reviewed AMM pool-creation route is required to preserve an existing base mint across a quote-token replacement. |
+- Only the exact `SPCXx` mint is launch-enabled. Every additional stock quote
+  still needs compatible Meteora support and the same live identity, lifecycle,
+  transfer, route, and price checks.
+- Broader DBC presets can be added only after they receive the same policy,
+  account-review, simulation, and post-launch monitoring coverage.
+- Sentinel currently runs daily on the hosting plan. A paid scheduler or
+  external keeper can increase cadence and add stronger retry guarantees.
+- Agent fees can be read and attributed, but the agent cannot claim them until
+  ClawPump exposes a supported bounded Meteora claim or reviewed transaction
+  signing route.
+- Treasury yield remains disabled until fee claiming, reserve limits, one
+  allowlisted vault, withdrawal testing, reconciliation, and receipts are all
+  proven end to end. Nothing is automatically swapped or deposited today.
+- The paid x402 endpoint is deployed, but its observed payment header must be
+  corrected from devnet to mainnet before the first real paid request.
+- The live DBC markets have not graduated yet. Continuity will record the DAMM
+  v2 destination only after Meteora creates it at the configured curve target.
+- Replacing a quote token requires a new reviewed market. Continuity cannot
+  rewrite an existing pool or preserve its base mint through the current DBC
+  creation route.
 
 Claimable fees are real onchain accounting, but they are not the same as cash in
 the ClawPump wallet and they are not yield. Their realizable value depends on a
@@ -472,8 +483,11 @@ successful claim and, if conversion is desired, a safe executable route.
 
 ## Roadmap
 
-1. **Close the external-agent proof.** Redeploy the GET-compatible skill route,
-   capture one successful ClawPump skill run, and complete one paid x402 call.
+1. **Close the remaining external-agent proof.** The MCP, interactive ClawPump
+   skill, Cloud Service deployment, and unpaid x402 discovery paths are
+   verified. Resolve the gateway's mainnet/devnet payment mismatch before one
+   paid x402 call; if used in the submission, also capture one scheduled
+   ClawPump automation run.
 2. **Enable bounded agent fee claims.** Integrate a ClawPump-supported Meteora
    partner-fee claim action, show the decoded transaction, simulate it, require
    explicit approval, and store the returned signature and balance change.
@@ -510,6 +524,15 @@ The custom operator flow independently launched `ORBIT/SPCXx`:
 - Meteora DBC configuration: `AtDU5jy5eprpEaDpWtBZztkycvJRqaNGSBSExHq6Ya1b`;
 - Meteora virtual pool: `EBAYsw8Y9HzVinacauNAx11um8QUNAsLCShNeNV8M7jn`;
 - first monitoring receipt: `8b871cd2…74b08` with lifecycle `CURRENT` and DBC state `POOL_LIVE`.
+
+### Live fee accrual
+
+The `CONT/SPCXx` pool currently reports `308,601` raw partner-fee units, or
+`0.00308601 SPCXx`, claimable by the configured ClawPump agent authority. This
+is the first verified revenue signal from a Continuity-launched market on
+Solana mainnet. It proves fee accrual, not fee custody: the amount remains in
+Meteora's accounting until the exact agent wallet can approve a supported
+claim transaction. See [`docs/agent-treasury.md`](docs/agent-treasury.md).
 
 Independent finalized RPC reads confirm that the mint exists under the SPL Token
 program and that the configuration and virtual pool exist under Meteora DBC.
@@ -595,6 +618,8 @@ skills/
   continuity-sentinel/    # ClawPump skill package
 supabase/
   migrations/             # Operator ownership and launch-state schema
+docs/                     # Public product, verification, and evidence guides
+.github/workflows/        # Secret-free CI verification
 ```
 
 Route files compose features; domain modules contain no React or Next.js
@@ -639,8 +664,10 @@ before testing the deployed custom launch flow.
 Open:
 
 - `http://localhost:3000` — product site
+- `http://localhost:3000/docs` — single-page product guide
 - `http://localhost:3000/demo` — wallet-free lifecycle replay
 - `http://localhost:3000/app` — live-read product workspace
+- `http://localhost:3000/app/activity` — automatic and requested Sentinel history
 - `http://localhost:3000/app/markets/spacex` — SpaceX lifecycle detail
 - `http://localhost:3000/app/launch` — create a new protected market
 - `http://localhost:3000/app/treasury` — inspect agent fees and operating reserves
@@ -657,6 +684,8 @@ Open:
 
 The MCP server exposes `list_market_lifecycle`, `get_market_evidence`, and
 `run_quote_rail_scan`. Payment never grants transaction or signing authority.
+The Activity page refreshes automatically every 15 seconds and paginates the
+latest 100 durable Sentinel records in pages of eight.
 
 ## Production environment variables
 

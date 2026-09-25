@@ -140,9 +140,10 @@ export class SentinelRunner {
         baseMint: dbc.market?.baseMint ?? "CONT_MINT_PENDING_LAUNCH",
         quoteMint: dbc.addresses.quoteMint,
         expectedQuoteMint: SPCXX_MINT,
-        // Proposed markets are bound to the freshly hashed SDK review. Existing
-        // pools remain blocked until post-launch config decoding is implemented.
-        configHashMatches: state === "PROPOSED",
+        // Proposed markets are bound to the freshly hashed SDK review. A live
+        // pool is marked pending—not mismatched—until its full configuration is
+        // decoded and reconciled with the stored launch hash.
+        configHashMatches: state === "PROPOSED" ? true : null,
       },
       quoteAsset: {
         symbol: "SPCXx",

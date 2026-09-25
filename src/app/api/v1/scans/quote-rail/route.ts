@@ -15,7 +15,8 @@ async function runScan(
         request.headers.get("Idempotency-Key")?.trim() ||
         url.searchParams.get("idempotencyKey")?.trim() ||
         randomUUID(),
-      trigger: access === "CLAWPUMP_X402" ? "CLAWPUMP_X402" : "ON_DEMAND",
+      trigger:
+        access === "CLAWPUMP_X402" ? "CLAWPUMP_X402" : "CLAWPUMP_SKILL",
     });
     return Response.json(
       {

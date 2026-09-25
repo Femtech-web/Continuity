@@ -222,7 +222,23 @@ the in-product Sentinel history.
 
 Expected cost: none. Expected onchain transaction: none.
 
-## 5. Install and run the Continuity Sentinel skill on ClawPump
+## 5. Install and run the Continuity Sentinel skill on ClawPump — complete
+
+The successful production run is preserved at
+[`evidence/clawpump/01-sentinel-skill-run.png`](evidence/clawpump/01-sentinel-skill-run.png).
+ClawPump returned `LAUNCH_BLOCKED` with evidence hash `a5071619…013818` and
+record hash `075dbddb…39e607`. Continuity persisted the exact hashes under run
+ID `418a803d-8916-4484-8a42-5c093c1d7351` in `SUPABASE_DURABLE` storage. A
+blocked safety verdict proves the integration worked; this test was not
+expected to authorize a launch.
+
+The captured version treated missing post-launch hash decoding as
+`CONFIG_HASH_MISMATCH`. The corrected policy now reports
+`CONFIG_ATTESTATION_PENDING` and manual review unless an actual mismatch is
+proven. The captured hashes still prove the agent response and durable record
+are identical.
+
+The following steps reproduce the completed test:
 
 The skill is a plain instruction file already stored in this repository at
 `skills/continuity-sentinel/SKILL.md`. Installing it means copying that file's
@@ -266,7 +282,8 @@ then receives the read-only Continuity answer.
 2. Connect the settlement wallet requested by ClawPump.
 3. Ensure the agent has an active model or provider connection.
 4. Turn **Service active** on.
-5. Set the lowest practical test price, such as `$0.01` per request.
+5. Set the lowest practical test price. The current verified deployment uses
+   `$0.10` per request.
 6. Use this public description:
 
 ```text
@@ -289,6 +306,14 @@ curl -i -X POST 'PASTE_X402_ENDPOINT_HERE' \
 
 The unpaid request must return HTTP `402` with payment requirements. Capture
 the status and redacted payment terms.
+
+Verified on 25 September 2026: the deployed Continuity Sentinel endpoint
+returned HTTP `402` and reported the service active and ready. Do **not** move
+to the paid step yet: the service body labels settlement as Solana mainnet but
+the signed payment header quotes Solana devnet and devnet USDC. ClawPump must
+return a consistent mainnet payment requirement first. The safe discovery
+record is in
+[`evidence/clawpump/03-x402-discovery.txt`](evidence/clawpump/03-x402-discovery.txt).
 
 ### Complete one paid request
 
@@ -322,7 +347,8 @@ screenshots and official references.
 - fresh scheduled Sentinel result;
 - external MCP tool call and persisted MCP run;
 - enabled ClawPump custom skill and one agent result;
-- x402 HTTP 402 discovery plus one successful paid request.
+- x402 HTTP 402 discovery (complete) plus one successful paid request after the
+  current mainnet/devnet settlement mismatch is fixed.
 
 The second launch is complete only when it appears under **Protected markets**
 after a page refresh. Record its ClawPump funding and Continuity launch

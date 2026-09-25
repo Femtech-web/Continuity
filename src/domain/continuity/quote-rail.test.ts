@@ -110,3 +110,17 @@ test("blocks an observed configuration hash mismatch", () => {
   assert.equal(result.code, "LAUNCH_BLOCKED");
   assert.ok(result.reasons.includes("CONFIG_HASH_MISMATCH"));
 });
+
+test("sends an unverified post-launch configuration hash to manual review", () => {
+  const result = evaluateQuoteRail({
+    ...baseInput,
+    market: {
+      ...baseInput.market,
+      state: "ACTIVE",
+      configHashMatches: null,
+    },
+  });
+  assert.equal(result.code, "MANUAL_REVIEW");
+  assert.ok(result.reasons.includes("CONFIG_ATTESTATION_PENDING"));
+  assert.ok(!result.reasons.includes("CONFIG_HASH_MISMATCH"));
+});

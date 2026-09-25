@@ -8,6 +8,7 @@ export type QuoteRailReasonCode =
   | "QUOTE_MINT_MISMATCH"
   | "QUOTE_BADGE_MISSING"
   | "TOKEN_PROGRAM_NOT_ALLOWED"
+  | "CONFIG_ATTESTATION_PENDING"
   | "CONFIG_HASH_MISMATCH"
   | "LIFECYCLE_EVIDENCE_MISSING"
   | "LIFECYCLE_EVIDENCE_CONFLICTED"
@@ -26,7 +27,7 @@ export interface QuoteRailEvaluationInput {
     readonly baseMint: string;
     readonly quoteMint: string;
     readonly expectedQuoteMint: string;
-    readonly configHashMatches: boolean;
+    readonly configHashMatches: boolean | null;
   };
   readonly quoteAsset: {
     readonly symbol: string;
@@ -116,10 +117,13 @@ export function evaluateQuoteRail(
     },
     {
       label: "Configuration hash",
-      passed: input.market.configHashMatches,
-      detail: input.market.configHashMatches
-        ? "Observed configuration matches the attested hash"
-        : "Observed configuration differs from the attested hash",
+      passed: input.market.configHashMatches === true,
+      detail:
+        input.market.configHashMatches === null
+          ? "Post-launch configuration hash attestation is pending"
+          : input.market.configHashMatches
+            ? "Observed configuration matches the attested hash"
+            : "Observed configuration differs from the attested hash",
     },
     {
       label: "Lifecycle evidence",
@@ -140,7 +144,11 @@ export function evaluateQuoteRail(
   if (!input.quoteAsset.tokenProgramAllowed) {
     reasons.push("TOKEN_PROGRAM_NOT_ALLOWED");
   }
-  if (!input.market.configHashMatches) reasons.push("CONFIG_HASH_MISMATCH");
+  if (input.market.configHashMatches === false) {
+    reasons.push("CONFIG_HASH_MISMATCH");
+  } else if (input.market.configHashMatches === null) {
+    reasons.push("CONFIG_ATTESTATION_PENDING");
+  }
 
   if (input.manifest.evidenceStatus === "MISSING") {
     reasons.push("LIFECYCLE_EVIDENCE_MISSING");

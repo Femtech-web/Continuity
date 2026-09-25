@@ -7,7 +7,7 @@ import { UseCasesSection } from "@/features/home/use-cases-section";
 
 export default function HomePage() {
   return (
-    <main>
+    <main id="main" tabIndex={-1}>
       <HeroSection />
       <TechnologySection />
       <UseCasesSection />

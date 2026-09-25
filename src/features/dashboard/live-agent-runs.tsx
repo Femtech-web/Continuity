@@ -21,6 +21,8 @@ type RunsState =
     };
 
 const SENTINEL_HISTORY_REFRESH_MS = 15_000;
+const SENTINEL_HISTORY_PAGE_SIZE = 8;
+const SENTINEL_HISTORY_FETCH_LIMIT = 100;
 
 function displayState(value: string): string {
   return value
@@ -45,14 +47,18 @@ export function LiveAgentRuns() {
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<RunsState>({ status: "loading" });
   const [isRunning, setIsRunning] = useState(false);
+  const [historyPage, setHistoryPage] = useState(0);
 
   const loadRuns = useCallback(
     async (signal: AbortSignal, background = false) => {
       try {
-        const response = await fetch("/api/v1/sentinel/runs?limit=20", {
-          cache: "no-store",
-          signal,
-        });
+        const response = await fetch(
+          `/api/v1/sentinel/runs?limit=${SENTINEL_HISTORY_FETCH_LIMIT}`,
+          {
+            cache: "no-store",
+            signal,
+          },
+        );
         const payload: unknown = await response.json();
         if (
           !response.ok ||
@@ -70,14 +76,21 @@ export function LiveAgentRuns() {
         ) {
           throw new Error("Agent-run evidence could not be loaded.");
         }
+        const records = payload.records as PersistedAgentRun[];
         setState({
-          records: payload.records as PersistedAgentRun[],
+          records,
           status: "ready",
           storage: {
             integrity: "SHA256_HASH_CHAIN",
             scope: payload.storage.scope,
           },
         });
+        setHistoryPage((currentPage) =>
+          Math.min(
+            currentPage,
+            Math.max(0, Math.ceil(records.length / SENTINEL_HISTORY_PAGE_SIZE) - 1),
+          ),
+        );
       } catch (error) {
         if (signal.aborted || background) return;
         setState({
@@ -185,6 +198,15 @@ export function LiveAgentRuns() {
   }
 
   const latest = state.records[0];
+  const historyPageCount = Math.max(
+    1,
+    Math.ceil(state.records.length / SENTINEL_HISTORY_PAGE_SIZE),
+  );
+  const historyStart = historyPage * SENTINEL_HISTORY_PAGE_SIZE;
+  const visibleRecords = state.records.slice(
+    historyStart,
+    historyStart + SENTINEL_HISTORY_PAGE_SIZE,
+  );
 
   return (
     <>
@@ -272,7 +294,7 @@ export function LiveAgentRuns() {
               <span role="columnheader">Evidence</span>
               <span role="columnheader">Record</span>
             </div>
-            {state.records.map((record) => (
+            {visibleRecords.map((record) => (
               <div
                 className={`${styles.ledgerRow} ${styles.agentRunGrid}`}
                 key={record.document.runId}
@@ -286,6 +308,39 @@ export function LiveAgentRuns() {
               </div>
             ))}
           </div>
+          {state.records.length > SENTINEL_HISTORY_PAGE_SIZE ? (
+            <nav className={styles.ledgerPagination} aria-label="Sentinel history pages">
+              <p>
+                Showing {historyStart + 1}–
+                {Math.min(
+                  historyStart + SENTINEL_HISTORY_PAGE_SIZE,
+                  state.records.length,
+                )}{" "}
+                of {state.records.length} recent checks
+              </p>
+              <div>
+                <button
+                  disabled={historyPage === 0}
+                  onClick={() => setHistoryPage((page) => Math.max(0, page - 1))}
+                  type="button"
+                >
+                  Previous
+                </button>
+                <span aria-live="polite">
+                  Page {historyPage + 1} of {historyPageCount}
+                </span>
+                <button
+                  disabled={historyPage >= historyPageCount - 1}
+                  onClick={() =>
+                    setHistoryPage((page) => Math.min(historyPageCount - 1, page + 1))
+                  }
+                  type="button"
+                >
+                  Next
+                </button>
+              </div>
+            </nav>
+          ) : null}
         </section>
       ) : null}
     </>

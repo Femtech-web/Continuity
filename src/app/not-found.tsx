@@ -3,7 +3,7 @@ import { ContinuityMark } from "@/components/continuity-mark";
 
 export default function NotFound() {
   return (
-    <main className="error-page">
+    <main className="error-page" id="main" tabIndex={-1}>
       <ContinuityMark />
       <div>
         <span className="section-kicker">Route not found</span>

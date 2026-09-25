@@ -254,7 +254,7 @@ export async function DashboardShell({
       : getRoute(isDemo ? "mainnet" : "demo", view);
 
   return (
-    <main className={styles.shell}>
+    <main className={styles.shell} id="main" tabIndex={-1}>
       <div className={styles.main}>
         <header className={styles.topbar}>
           <div className={styles.topbarInner}>
