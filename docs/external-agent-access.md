@@ -42,7 +42,10 @@ and hashes, and never sign a transaction.
 4. Paste the complete contents of `skills/continuity-sentinel/SKILL.md`.
 5. Save it and make sure it is enabled for that agent.
 6. Confirm the agent has an active model/provider connection.
-7. In the agent chat, send:
+7. Deploy the current Continuity build. The skill's interactive path uses the
+   read-only `GET /api/v1/scans/quote-rail` entry because ClawPump Chat's public
+   fetcher does not issue POST requests. The paid x402 path remains `POST`.
+8. In the agent chat, send:
 
 ```text
 Run the Continuity Sentinel skill for CONT/SPCXx. Return the verdict, reason
@@ -50,9 +53,14 @@ codes, evidence hash, record hash, and nextRunAt. Do not sign or submit any
 transaction.
 ```
 
-8. Confirm the reply contains live values, not only a general explanation.
-9. Open Continuity **Activity** and wait up to 15 seconds for the new external
+9. Confirm the reply contains live values, not only a general explanation.
+10. Open Continuity **Activity** and wait up to 15 seconds for the new external
    scan record to appear automatically.
+
+If the reply says `HTTP 405`, the deployed Continuity version or the saved
+ClawPump skill is stale. Redeploy Continuity, replace the saved skill with the
+current `SKILL.md`, and run the same prompt again. Do not point the chat agent at
+`/api/mcp`; MCP is a separate protocol used by MCP clients such as Inspector.
 
 ClawPump also exposes official custom-skill tools (`create_custom_skill`,
 `update_custom_skill`, and `list_custom_skills`) if the dashboard editor is not

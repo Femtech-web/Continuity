@@ -30,11 +30,13 @@ External MCP, ClawPump skill, and x402 verification is documented in
 7. [How automatic monitoring works](#how-automatic-monitoring-works)
 8. [Why only SPCXx can launch today](#why-only-spcxx-can-launch-today)
 9. [Product paths](#product-paths)
-10. [What is live and what remains](#what-the-current-build-can-do)
-11. [Confirmed mainnet proof](#confirmed-mainnet-proof)
-12. [Roles and authority](#product-roles-and-authority)
-13. [Run, configure, and verify](#run-locally)
-14. [Agent treasury](#agent-treasury)
+10. [What is live today](#what-the-current-build-can-do)
+11. [What is not live yet](#what-is-not-live-yet)
+12. [Roadmap](#roadmap)
+13. [Confirmed mainnet proof](#confirmed-mainnet-proof)
+14. [Roles and authority](#product-roles-and-authority)
+15. [Run, configure, and verify](#run-locally)
+16. [Agent treasury](#agent-treasury)
 
 ## Beginner glossary
 
@@ -398,6 +400,51 @@ Read a registered Meteora market
 - Hash-chained Sentinel and monitoring evidence
 - Confirmed `CONT/SPCXx` and operator-created `ORBIT/SPCXx` mainnet markets,
   each with a persisted `POOL_LIVE` post-launch scan
+- Read-only agent treasury views that verify the live Meteora fee authority,
+  show claimable partner fees, and keep those fees separate from pool liquidity
+
+## What is not live yet
+
+Continuity is deliberately explicit about the boundary between a working read,
+a working transaction, and a planned action. The application does not present
+planned treasury or rollover work as complete.
+
+| Capability | Current truth | What is still required |
+| --- | --- | --- |
+| Protected-market launch | Live. Two separate mainnet launches created `CONT/SPCXx` and `ORBIT/SPCXx`. | Broader DBC presets can be added after they receive the same simulation and policy coverage. |
+| Post-launch monitoring | Live. Registered markets are scanned on demand and by the production scheduler. | A paid scheduler or external keeper can increase cadence beyond the hosting plan's daily cron limit. |
+| MCP access | Live and independently verified in MCP Inspector. | No launch authority is intentionally exposed through MCP. |
+| ClawPump skill | Implemented, but the first dashboard test exposed a GET/POST mismatch. The route and skill are corrected in this build. | Redeploy, update the saved ClawPump skill, and capture one successful agent reply plus its matching Activity record. |
+| Paid x402 scan | Endpoint and buyer instructions are implemented. | Complete one real paid request and retain the seller receipt or settlement signature. |
+| Stock coverage | All eight current PreStocks instruments are monitored. | Only exact `SPCXx` is launch-enabled; every additional quote mint still needs compatible Meteora support and the same live checks. |
+| Fee visibility | Live. Continuity can read real, claimable Meteora partner fees attributed to the bound agent. | The fee is not in the agent wallet until that exact agent signs a claim transaction. |
+| Fee claim | Not live. There is intentionally no Claim button. | ClawPump must expose a supported bounded Meteora-claim action or reviewed transaction-signing route for the agent wallet. |
+| Treasury yield | Not live. Nothing is automatically swapped or deposited. | Claiming, limits, reserve policy, one allowlisted vault, withdrawal testing, reconciliation, and receipts must all ship first. |
+| DBC graduation | The live markets are still on their opening curves. | Meteora creates the DAMM v2 destination only when a curve reaches its configured threshold; Continuity will record the real address then. |
+| Same-token rollover | Not live. Continuity cannot edit an old pool, and the current DBC creation path creates a new base token. | A separately reviewed AMM pool-creation route is required to preserve an existing base mint across a quote-token replacement. |
+
+Claimable fees are real onchain accounting, but they are not the same as cash in
+the ClawPump wallet and they are not yield. Their realizable value depends on a
+successful claim and, if conversion is desired, a safe executable route.
+
+## Roadmap
+
+1. **Close the external-agent proof.** Redeploy the GET-compatible skill route,
+   capture one successful ClawPump skill run, and complete one paid x402 call.
+2. **Enable bounded agent fee claims.** Integrate a ClawPump-supported Meteora
+   partner-fee claim action, show the decoded transaction, simulate it, require
+   explicit approval, and store the returned signature and balance change.
+3. **Add a guarded treasury policy.** Preserve an agent SOL reserve, cap every
+   conversion and deposit, allow one reviewed SOL/USDC lending destination, and
+   prove withdrawal before enabling any schedule. No borrowing or leverage.
+4. **Increase monitoring cadence and resilience.** Add a production RPC with an
+   SLA, more frequent scheduling, retry observability, and operator alerting.
+5. **Expand launch-ready stock quotes.** Enable another PreStocks mint only after
+   its exact mint, lifecycle, transfer behavior, Meteora compatibility, price
+   reference, and executable route all pass.
+6. **Support true successor pools for existing base tokens.** Add a reviewed AMM
+   route that can create a new quote pool without pretending an old pool can be
+   rewritten.
 
 ## Confirmed mainnet proof
 
@@ -427,15 +474,6 @@ The complete human-readable record is in
 [`docs/mainnet-transaction-evidence.md`](docs/mainnet-transaction-evidence.md).
 The shortest production validation sequence is in
 [`docs/submission-test-runbook.md`](docs/submission-test-runbook.md).
-
-## What is not finished
-
-- The MCP endpoint has been verified from an independent MCP Inspector and its
-  screenshots are preserved under `docs/evidence/mcp-inspector`.
-- The ClawPump-hosted skill still needs to be installed/activated and exercised
-  through one real scheduled run and one paid x402 request.
-- Only exact `SPCXx` is launch-enabled today. Other catalog instruments remain
-  blocked until they independently satisfy the same non-optional checks.
 
 ## Persistence and ownership
 
@@ -567,7 +605,8 @@ Open:
 ## Agent access
 
 - ClawPump skill: `skills/continuity-sentinel/SKILL.md`
-- Scan endpoint: `POST /api/v1/scans/quote-rail`
+- Interactive ClawPump skill scan: `GET /api/v1/scans/quote-rail`
+- Paid x402 scan origin: `POST /api/v1/scans/quote-rail`
 - Sentinel runs: `GET/POST /api/v1/sentinel/runs`
 - Scheduled lifecycle and protected-market monitor: `GET /api/v1/sentinel/schedule`
 - Read-only agent treasuries: `GET /api/v1/treasuries`
@@ -690,15 +729,39 @@ Read live Meteora partner fees
   → record every movement and pause automatically on Sentinel risk
 ```
 
-Only the first two steps are live today. Claiming and lending remain locked
-because the ClawPump Partner API used by Continuity has not yet proven a bounded
-transaction-signing route for the agent wallet. Continuity will not export an
-agent private key or ask the human operator to impersonate it. The next safe
-release is an operator-reviewed claim followed by one capped SOL/USDC lending
-destination—no borrowing, leverage, or automatic destination changes.
+Only the first two steps are live today. Claiming and lending remain locked.
+Meteora's current DBC SDK provides `claimPartnerTradingFee` and returns an
+unsigned transaction whose fee payer and required authority must sign. ClawPump
+does sign transactions through approved, purpose-built tools—such as swaps,
+wallet transfers, lending, and x402 payments—but, as checked on 25 September
+2026, its public Partner API and official 134-tool catalog do not document a
+generic Solana transaction signer or a Meteora partner-fee claim tool.
 
-Primary references: [Meteora DBC program](https://github.com/MeteoraAg/dynamic-bonding-curve),
-[ClawPump documentation](https://clawpump.tech/docs), and
+That is a statement about the current supported public integration surface, not
+a claim that ClawPump has no internal signing capability. Continuity will not
+export the agent private key, call an undocumented internal route, or ask the
+human operator to impersonate the agent.
+
+### Integration request for the ClawPump team
+
+Continuity needs either a bounded `meteora_claim_partner_fees` tool or a
+reviewed arbitrary-transaction approval flow. The safe interface should:
+
+- verify that the requesting user controls the agent;
+- allowlist the Meteora program and exact claim instruction;
+- show decoded instructions, accounts, fee amounts, and destination;
+- simulate before signing and enforce maximum claim/spend values;
+- require explicit confirmation and an idempotency key; and
+- return the Solana signature and post-transaction balance evidence without
+  exporting the private key.
+
+Once that supported route exists, Continuity can add an honest Claim button and
+then proceed to one capped SOL/USDC lending destination—no borrowing, leverage,
+or automatic destination changes.
+
+Primary references: [Meteora's DBC method and signing reference](https://github.com/MeteoraAg/meteora-invent/blob/main/skills/meteora/references/dbc.md),
+[ClawPump's official tool catalog](https://github.com/Clawpump/claw-agent/blob/main/skills/clawpump/SKILL.md),
+[ClawPump Partner API](https://clawpump.tech/developers), and
 [Jupiter Lend](https://jup.ag/lend/earn).
 The implementation phases and trust boundaries are specified in
 [`docs/agent-treasury.md`](docs/agent-treasury.md).

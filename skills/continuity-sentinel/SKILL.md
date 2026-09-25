@@ -11,14 +11,20 @@ do not infer an issuer successor, mint, deadline, conversion ratio, or DBC state
 
 ## Read-only scan
 
-For CONT/SPCXx, request a fresh scan from:
+For an interactive ClawPump chat, open this exact public URL with the agent's
+public-fetch tool:
 
-`POST https://continuity-alpha-rouge.vercel.app/api/v1/scans/quote-rail`
+`GET https://continuity-alpha-rouge.vercel.app/api/v1/scans/quote-rail`
 
-Send an `Idempotency-Key` when the calling environment supports headers. The
-response contains a hash-addressed PreStocks manifest snapshot, Meteora DBC
-attestation, composite Jupiter/Pyth market reference, deterministic verdict,
-next run time, and append-only record hash.
+Do not search for the URL and do not change it to `/api/mcp`. The public-fetch
+tool only needs to open the exact URL; no body, API key, or wallet is required.
+The response contains a hash-addressed PreStocks manifest snapshot, Meteora
+DBC attestation, composite Jupiter/Pyth market reference, deterministic
+verdict, next run time, and append-only record hash.
+
+For a paid ClawPump x402 Cloud service, the gateway calls the same resource
+with `POST` after its payment handshake. API clients that use `POST` should send
+an `Idempotency-Key` header when possible.
 
 The Continuity endpoint is read-only. ClawPump x402 Cloud performs payment
 discovery and settlement before this agent runs; the Continuity endpoint does
